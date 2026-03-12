@@ -11,6 +11,19 @@ import { captureScreenshot } from "./screenshotter";
 const intervals = new Map<number, ReturnType<typeof setInterval>>();
 const checking = new Map<number, boolean>();
 
+function parseIgnorePatterns(server: Server): RegExp[] {
+  if (!server.ignore_patterns) return [];
+  try {
+    const parsed = JSON.parse(server.ignore_patterns) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return (parsed as unknown[])
+      .filter((p): p is string => typeof p === "string" && p.length > 0)
+      .flatMap((p) => { try { return [new RegExp(p, "g")]; } catch { return []; } });
+  } catch {
+    return [];
+  }
+}
+
 export async function runCheckForServer(server: Server): Promise<void> {
   if (checking.get(server.id)) {
     console.log(`[engine] Skipping check for ${server.name} — previous check still running`);
@@ -19,8 +32,9 @@ export async function runCheckForServer(server: Server): Promise<void> {
   checking.set(server.id, true);
 
   try {
+    const extraPatterns = parseIgnorePatterns(server);
     const result = await checkServer(server.url, server.response_time_threshold_ms);
-    const contentHash = result.rawHtml ? hashContent(result.rawHtml) : null;
+    const contentHash = result.rawHtml ? hashContent(result.rawHtml, extraPatterns) : null;
 
     let contentChanged = false;
     let diffId: number | null = null;
@@ -46,8 +60,8 @@ export async function runCheckForServer(server: Server): Promise<void> {
         const oldPath = join(SNAPSHOTS_DIR, `${server.id}.html`);
         const oldHtml = existsSync(oldPath) ? readFileSync(oldPath, "utf-8") : "";
 
-        const normalizedOld = normalizeHtml(oldHtml);
-        const normalizedNew = normalizeHtml(result.rawHtml);
+        const normalizedOld = normalizeHtml(oldHtml, extraPatterns);
+        const normalizedNew = normalizeHtml(result.rawHtml, extraPatterns);
         const diffContent = computeDiff(normalizedOld, normalizedNew, server.name);
 
         if (!hasMeaningfulChanges(diffContent)) {

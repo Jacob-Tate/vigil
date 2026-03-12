@@ -10,6 +10,7 @@ export interface Server {
   baseline_file: string | null;
   last_alerted_at: string | null;
   last_alert_type: string | null;
+  ignore_patterns: string | null; // JSON array of regex strings
   last_check: Check | null;
 }
 
@@ -86,4 +87,5 @@ export interface ServerFormData {
   interval_seconds: number;
   response_time_threshold_ms: number;
   active: boolean;
+  ignore_patterns: string[];
 }

@@ -14,18 +14,24 @@ export default function ServerForm({ server, onSave, onClose }: Props) {
     interval_seconds: 300,
     response_time_threshold_ms: 3000,
     active: true,
+    ignore_patterns: [],
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (server) {
+      let patterns: string[] = [];
+      if (server.ignore_patterns) {
+        try { patterns = JSON.parse(server.ignore_patterns) as string[]; } catch { /* ignore */ }
+      }
       setForm({
         name: server.name,
         url: server.url,
         interval_seconds: server.interval_seconds,
         response_time_threshold_ms: server.response_time_threshold_ms,
         active: server.active === 1,
+        ignore_patterns: patterns,
       });
     }
   }, [server]);
@@ -122,6 +128,30 @@ export default function ServerForm({ server, onSave, onClose }: Props) {
             />
             Active (monitoring enabled)
           </label>
+          <details className="group">
+            <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 select-none list-none flex items-center gap-1">
+              <span className="transition-transform group-open:rotate-90">▶</span>
+              Ignore patterns
+            </summary>
+            <div className="mt-2">
+              <textarea
+                rows={4}
+                value={form.ignore_patterns.join("\n")}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    ignore_patterns: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean),
+                  }))
+                }
+                className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={"sesskey\":\\s*\"[^\"]*\"\nrandom[0-9a-f]{8,}"}
+                spellCheck={false}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                One regex per line. Applied before hashing and diffing to suppress dynamic content.
+              </p>
+            </div>
+          </details>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <button

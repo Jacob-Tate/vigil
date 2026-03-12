@@ -32,6 +32,9 @@ db.exec("PRAGMA journal_mode = WAL");
 // Initialize schema
 db.exec(schema);
 
+// Migrations: add columns that may not exist in older databases
+try { db.exec("ALTER TABLE servers ADD COLUMN ignore_patterns TEXT"); } catch { /* column already exists */ }
+
 // Type-safe query helpers that work around node:sqlite's untyped return values
 export function dbGet<T>(sql: string, ...params: unknown[]): T | undefined {
   const stmt = db.prepare(sql);

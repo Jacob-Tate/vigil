@@ -18,18 +18,18 @@ const DYNAMIC_PATTERNS: RegExp[] = [
   // Moodle / generic random request IDs embedded in inline scripts
   // e.g. 'random69b28bab616f14' or M.util.js_pending('random...')
   /['"]random[a-f0-9]{8,}['"]/gi,
-  // Generic random/nonce hex strings assigned to JS variables
-  // e.g. var nonce = "a1b2c3d4e5f6...", data-nonce="...", id="rand-..."
-  /(?:nonce|rand|token|requesttoken)\s*[=:]\s*["'][a-f0-9]{16,}["']/gi,
-  // Session/auth keys in embedded JSON config (Moodle M.cfg, Laravel, Rails, etc.)
-  // e.g. "sesskey":"puHtB6pqvc", "authenticity_token":"...", "_token":"..."
-  /"(?:sesskey|sessionkey|sess_key|_token|csrfToken|csrf_token|authenticity_token|requestToken)"\s*:\s*"[^"]*"/gi,
+  // Generic random/nonce tokens assigned to JS variables (hex or base64)
+  // e.g. var nonce = "a1b2c3d4e5f6...", data-nonce="WULuTz6I...", token = "abc123..."
+  /(?:nonce|rand|token|requesttoken)\s*[=:]\s*["'][a-zA-Z0-9+/=_-]{16,}["']/gi,
+  // Session/auth/nonce keys in embedded JSON config (Moodle M.cfg, Laravel, Rails, etc.)
+  // e.g. "sesskey":"puHtB6pqvc", "nonce":"WULuTz6I2JKifOLOUJhzTA", "_token":"..."
+  /"(?:nonce|sesskey|sessionkey|sess_key|_token|csrfToken|csrf_token|authenticity_token|requestToken)"\s*:\s*"[^"]*"/gi,
 ];
 
-export function normalizeHtml(html: string): string {
+export function normalizeHtml(html: string, extraPatterns: RegExp[] = []): string {
   let normalized = html;
 
-  for (const pattern of DYNAMIC_PATTERNS) {
+  for (const pattern of [...DYNAMIC_PATTERNS, ...extraPatterns]) {
     normalized = normalized.replace(pattern, "");
   }
 
@@ -37,6 +37,6 @@ export function normalizeHtml(html: string): string {
   return normalized.replace(/\s+/g, " ").trim();
 }
 
-export function hashContent(html: string): string {
-  return createHash("sha256").update(normalizeHtml(html), "utf8").digest("hex");
+export function hashContent(html: string, extraPatterns: RegExp[] = []): string {
+  return createHash("sha256").update(normalizeHtml(html, extraPatterns), "utf8").digest("hex");
 }

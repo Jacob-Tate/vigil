@@ -51,6 +51,8 @@ router.post(
   body("url").isURL({ require_tld: false }),
   body("interval_seconds").optional().isInt({ min: 30 }),
   body("response_time_threshold_ms").optional().isInt({ min: 100 }),
+  body("ignore_patterns").optional().isArray(),
+  body("ignore_patterns.*").optional().isString(),
   (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -58,17 +60,20 @@ router.post(
       return;
     }
 
-    const { name, url, interval_seconds = 300, response_time_threshold_ms = 3000 } = req.body as {
+    const { name, url, interval_seconds = 300, response_time_threshold_ms = 3000, ignore_patterns } = req.body as {
       name: string;
       url: string;
       interval_seconds?: number;
       response_time_threshold_ms?: number;
+      ignore_patterns?: string[];
     };
+
+    const ignorePatternsJson = ignore_patterns != null ? JSON.stringify(ignore_patterns.filter(Boolean)) : null;
 
     try {
       const info = dbRun(
-        "INSERT INTO servers (name, url, interval_seconds, response_time_threshold_ms) VALUES (?, ?, ?, ?)",
-        name, url, interval_seconds, response_time_threshold_ms
+        "INSERT INTO servers (name, url, interval_seconds, response_time_threshold_ms, ignore_patterns) VALUES (?, ?, ?, ?, ?)",
+        name, url, interval_seconds, response_time_threshold_ms, ignorePatternsJson
       );
       const server = dbGet<Server>("SELECT * FROM servers WHERE id = ?", info.lastInsertRowid);
       if (!server) { res.status(500).json({ error: "Failed to retrieve created server" }); return; }
@@ -94,6 +99,8 @@ router.put(
   body("interval_seconds").optional().isInt({ min: 30 }),
   body("response_time_threshold_ms").optional().isInt({ min: 100 }),
   body("active").optional().isBoolean(),
+  body("ignore_patterns").optional().isArray(),
+  body("ignore_patterns.*").optional().isString(),
   (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -113,7 +120,12 @@ router.put(
       interval_seconds: number;
       response_time_threshold_ms: number;
       active: boolean;
+      ignore_patterns: string[];
     }>;
+
+    const ignorePatternsJson = bodyData.ignore_patterns != null
+      ? JSON.stringify(bodyData.ignore_patterns.filter(Boolean))
+      : server.ignore_patterns;
 
     const updated: Server = {
       ...server,
@@ -122,13 +134,14 @@ router.put(
       interval_seconds: bodyData.interval_seconds ?? server.interval_seconds,
       response_time_threshold_ms: bodyData.response_time_threshold_ms ?? server.response_time_threshold_ms,
       active: bodyData.active !== undefined ? (bodyData.active ? 1 : 0) : server.active,
+      ignore_patterns: ignorePatternsJson,
     };
 
     dbRun(
       `UPDATE servers SET name = ?, url = ?, interval_seconds = ?,
-       response_time_threshold_ms = ?, active = ? WHERE id = ?`,
+       response_time_threshold_ms = ?, active = ?, ignore_patterns = ? WHERE id = ?`,
       updated.name, updated.url, updated.interval_seconds,
-      updated.response_time_threshold_ms, updated.active, server.id
+      updated.response_time_threshold_ms, updated.active, updated.ignore_patterns, server.id
     );
 
     rescheduleServer(updated);

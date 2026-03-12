@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS servers (
     baseline_hash               TEXT,
     baseline_file               TEXT,
     last_alerted_at             TEXT,
-    last_alert_type             TEXT
+    last_alert_type             TEXT,
+    ignore_patterns             TEXT
 );
 
 CREATE TABLE IF NOT EXISTS checks (
