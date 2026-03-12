@@ -3,8 +3,8 @@ import { join } from "path";
 import { dbGet, dbAll, dbRun, SNAPSHOTS_DIR, DIFFS_DIR } from "../db/database";
 import { Server } from "../types";
 import { checkServer } from "./checker";
-import { hashContent } from "./hasher";
-import { computeDiff } from "./differ";
+import { hashContent, normalizeHtml } from "./hasher";
+import { computeDiff, hasMeaningfulChanges } from "./differ";
 import { evaluateAndAlert } from "./alerter";
 import { captureScreenshot } from "./screenshotter";
 
@@ -46,7 +46,22 @@ export async function runCheckForServer(server: Server): Promise<void> {
         const oldPath = join(SNAPSHOTS_DIR, `${server.id}.html`);
         const oldHtml = existsSync(oldPath) ? readFileSync(oldPath, "utf-8") : "";
 
-        const diffContent = computeDiff(oldHtml, result.rawHtml, server.name);
+        const normalizedOld = normalizeHtml(oldHtml);
+        const normalizedNew = normalizeHtml(result.rawHtml);
+        const diffContent = computeDiff(normalizedOld, normalizedNew, server.name);
+
+        if (!hasMeaningfulChanges(diffContent)) {
+          // Only dynamic tokens changed — update baseline hash silently, no alert
+          writeFileSync(oldPath, result.rawHtml, "utf-8");
+          dbRun(
+            "UPDATE servers SET baseline_hash = ?, baseline_file = ? WHERE id = ?",
+            contentHash,
+            `snapshots/${server.id}.html`,
+            server.id
+          );
+          console.log(`[engine] Hash changed for ${server.name} but diff is trivial — updating baseline silently`);
+        } else {
+
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 
         const tmpPath = join(DIFFS_DIR, `tmp-${server.id}-${timestamp}.html`);
@@ -84,6 +99,7 @@ export async function runCheckForServer(server: Server): Promise<void> {
         captureScreenshot(server.id, server.url).catch((err: unknown) => {
           console.warn(`[engine] Screenshot failed for ${server.name}:`, err);
         });
+        } // end else (meaningful changes)
       }
     }
 

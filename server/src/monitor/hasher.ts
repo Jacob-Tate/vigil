@@ -15,17 +15,28 @@ const DYNAMIC_PATTERNS: RegExp[] = [
   // Google Analytics / Tag Manager snippets
   /UA-\d+-\d+/gi,
   /GTM-[A-Z0-9]+/gi,
+  // Moodle / generic random request IDs embedded in inline scripts
+  // e.g. 'random69b28bab616f14' or M.util.js_pending('random...')
+  /['"]random[a-f0-9]{8,}['"]/gi,
+  // Generic random/nonce hex strings assigned to JS variables
+  // e.g. var nonce = "a1b2c3d4e5f6...", data-nonce="...", id="rand-..."
+  /(?:nonce|rand|token|requesttoken)\s*[=:]\s*["'][a-f0-9]{16,}["']/gi,
+  // Session/auth keys in embedded JSON config (Moodle M.cfg, Laravel, Rails, etc.)
+  // e.g. "sesskey":"puHtB6pqvc", "authenticity_token":"...", "_token":"..."
+  /"(?:sesskey|sessionkey|sess_key|_token|csrfToken|csrf_token|authenticity_token|requestToken)"\s*:\s*"[^"]*"/gi,
 ];
 
-export function hashContent(html: string): string {
+export function normalizeHtml(html: string): string {
   let normalized = html;
 
   for (const pattern of DYNAMIC_PATTERNS) {
     normalized = normalized.replace(pattern, "");
   }
 
-  // Normalize whitespace to avoid hash changes from formatting only
-  normalized = normalized.replace(/\s+/g, " ").trim();
+  // Normalize whitespace to avoid changes from formatting only
+  return normalized.replace(/\s+/g, " ").trim();
+}
 
-  return createHash("sha256").update(normalized, "utf8").digest("hex");
+export function hashContent(html: string): string {
+  return createHash("sha256").update(normalizeHtml(html), "utf8").digest("hex");
 }
