@@ -1,0 +1,22 @@
+node_modules/
+server/node_modules/
+client/node_modules/
+
+# Build outputs
+server/dist/
+client/dist/
+
+# Runtime data (snapshots, diffs, SQLite DB)
+server/data/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp
