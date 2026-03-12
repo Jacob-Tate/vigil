@@ -7,6 +7,11 @@ import {
   NotificationChannel,
   NotifierTypeDef,
   ServerFormData,
+  SslTarget,
+  SslCheck,
+  SslCheckStats,
+  PaginatedSslChecks,
+  SslTargetFormData,
 } from "../types";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -71,3 +76,26 @@ export const deleteNotification = (id: number) =>
   request<void>(`/notifications/${id}`, { method: "DELETE" });
 export const testNotification = (id: number) =>
   request<{ ok: boolean }>(`/notifications/${id}/test`, { method: "POST" });
+
+// SSL Targets
+export const getSslTargets = () =>
+  request<SslTarget[]>("/ssl/targets");
+export const getSslTarget = (id: number) =>
+  request<SslTarget>(`/ssl/targets/${id}`);
+export const createSslTarget = (data: SslTargetFormData) =>
+  request<SslTarget>("/ssl/targets", { method: "POST", body: JSON.stringify(data) });
+export const updateSslTarget = (id: number, data: Partial<SslTargetFormData>) =>
+  request<SslTarget>(`/ssl/targets/${id}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteSslTarget = (id: number) =>
+  request<void>(`/ssl/targets/${id}`, { method: "DELETE" });
+export const triggerSslCheck = (id: number) =>
+  request<{ ok: boolean; check: SslCheck | null }>(`/ssl/targets/${id}/check`, { method: "POST" });
+export const getSslTargetCertUrl = (id: number) => `/api/ssl/targets/${id}/cert`;
+
+// SSL Checks
+export const getSslChecks = (targetId: number, page = 1, limit = 50) =>
+  request<PaginatedSslChecks>(`/ssl/checks?targetId=${targetId}&page=${page}&limit=${limit}`);
+export const getSslCheckStats = (targetId: number) =>
+  request<SslCheckStats>(`/ssl/checks/stats/${targetId}`);
+export const getSslCheck = (id: number) =>
+  request<SslCheck>(`/ssl/checks/${id}`);

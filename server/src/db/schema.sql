@@ -48,3 +48,43 @@ CREATE TABLE IF NOT EXISTS notification_channels (
     config_json TEXT NOT NULL,
     active      INTEGER NOT NULL DEFAULT 1
 );
+
+-- SSL Monitor: one row per monitored domain/host
+CREATE TABLE IF NOT EXISTS ssl_targets (
+    id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                     TEXT NOT NULL,
+    host                     TEXT NOT NULL,
+    port                     INTEGER NOT NULL DEFAULT 443,
+    check_interval_seconds   INTEGER NOT NULL DEFAULT 3600,
+    expiry_threshold_hours   INTEGER NOT NULL DEFAULT 168,
+    active                   INTEGER NOT NULL DEFAULT 1,
+    created_at               TEXT NOT NULL DEFAULT (datetime('now')),
+    last_checked_at          TEXT,
+    last_alert_type          TEXT,
+    last_alerted_at          TEXT
+);
+
+-- SSL Monitor: one row per check run
+CREATE TABLE IF NOT EXISTS ssl_checks (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id           INTEGER NOT NULL REFERENCES ssl_targets(id) ON DELETE CASCADE,
+    checked_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    error               TEXT,
+    tls_version         TEXT,
+    subject_cn          TEXT,
+    subject_o           TEXT,
+    issuer_cn           TEXT,
+    issuer_o            TEXT,
+    valid_from          TEXT,
+    valid_to            TEXT,
+    days_remaining      INTEGER,
+    fingerprint_sha256  TEXT,
+    serial_number       TEXT,
+    sans                TEXT,       -- JSON array of strings
+    chain_json          TEXT,       -- JSON array of CertChainEntry objects
+    cert_file           TEXT,       -- path to PEM snapshot file
+    alert_type          TEXT        -- null | SSL_EXPIRING | SSL_EXPIRED | SSL_ERROR | SSL_CHANGED
+);
+
+CREATE INDEX IF NOT EXISTS idx_ssl_checks_target ON ssl_checks(target_id);
+CREATE INDEX IF NOT EXISTS idx_ssl_checks_at     ON ssl_checks(checked_at DESC);

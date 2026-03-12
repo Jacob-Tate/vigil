@@ -8,7 +8,10 @@ import { serversRouter } from "./api/servers";
 import { notificationsRouter } from "./api/notifications";
 import { checksRouter } from "./api/checks";
 import { diffsRouter } from "./api/diffs";
+import { sslTargetsRouter } from "./api/ssl-targets";
+import { sslChecksRouter } from "./api/ssl-checks";
 import { startEngine, stopEngine } from "./monitor/engine";
+import { startSslEngine, stopSslEngine } from "./monitor/ssl-engine";
 import { ContentDiff } from "./types";
 
 dotenv.config();
@@ -26,6 +29,8 @@ app.use("/api/servers", serversRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/checks", checksRouter);
 app.use("/api/diffs", diffsRouter);
+app.use("/api/ssl/targets", sslTargetsRouter);
+app.use("/api/ssl/checks", sslChecksRouter);
 
 // Health check
 app.get("/api/health", (_req, res) => {
@@ -71,18 +76,21 @@ const server = app.listen(PORT, () => {
   // Clean up old diffs on startup
   cleanupOldDiffs();
 
-  // Start the monitor engine
+  // Start the monitor engines
   startEngine();
+  void startSslEngine();
 });
 
 // Graceful shutdown
 process.on("SIGINT", () => {
   console.log("\n[server] Shutting down...");
   stopEngine();
+  stopSslEngine();
   server.close(() => process.exit(0));
 });
 
 process.on("SIGTERM", () => {
   stopEngine();
+  stopSslEngine();
   server.close(() => process.exit(0));
 });

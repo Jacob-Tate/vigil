@@ -60,7 +60,7 @@ export default function ServerCard({ server, onEdit, onDelete, onCheck }: Props)
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <Link
-              to={`/servers/${server.id}`}
+              to={`/http/servers/${server.id}`}
               className="font-semibold text-gray-900 hover:text-blue-600 truncate block"
             >
               {server.name}

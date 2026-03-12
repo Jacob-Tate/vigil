@@ -25,6 +25,8 @@ function buildMessage(
       return `${server.name} content has changed. A diff has been recorded.`;
     case "RECOVERED":
       return `${server.name} has RECOVERED. Status: ${check.statusCode}, Response time: ${check.responseTimeMs}ms`;
+    default:
+      return `${server.name} alert: ${alertType}`;
   }
 }
 
@@ -85,7 +87,7 @@ export async function evaluateAndAlert(
   for (const alertType of alertsToSend) {
     const diffViewUrl =
       alertType === "CONTENT_CHANGED" && currentCheck.diffId !== null
-        ? `${BASE_URL}/servers/${server.id}/diff/${currentCheck.diffId}`
+        ? `${BASE_URL}/http/servers/${server.id}/diff/${currentCheck.diffId}`
         : null;
 
     const payload: AlertPayload = {

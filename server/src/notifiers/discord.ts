@@ -7,6 +7,10 @@ const COLORS: Record<string, number> = {
   DEGRADED: 0xff9900,
   CONTENT_CHANGED: 0x5865f2,
   RECOVERED: 0x2ecc71,
+  SSL_EXPIRING: 0xff9900,
+  SSL_EXPIRED: 0xff4444,
+  SSL_ERROR: 0xff4444,
+  SSL_CHANGED: 0x9b59b6,
 };
 
 const discord: INotifier = {

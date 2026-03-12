@@ -12,6 +12,8 @@ const DATA_DIR = process.env.DATA_DIR
 const SNAPSHOTS_DIR = join(DATA_DIR, "snapshots");
 const DIFFS_DIR = join(DATA_DIR, "diffs");
 const SCREENSHOTS_DIR = join(DATA_DIR, "screenshots");
+const SSL_SNAPSHOTS_DIR = join(DATA_DIR, "ssl", "snapshots");
+const SSL_HISTORY_DIR = join(DATA_DIR, "ssl", "history");
 const DB_PATH = join(DATA_DIR, "monitor.db");
 
 // Ensure all data directories exist
@@ -19,6 +21,8 @@ mkdirSync(DATA_DIR, { recursive: true });
 mkdirSync(SNAPSHOTS_DIR, { recursive: true });
 mkdirSync(DIFFS_DIR, { recursive: true });
 mkdirSync(SCREENSHOTS_DIR, { recursive: true });
+mkdirSync(SSL_SNAPSHOTS_DIR, { recursive: true });
+mkdirSync(SSL_HISTORY_DIR, { recursive: true });
 
 const schemaPath = join(__dirname, "schema.sql");
 const schema = readFileSync(schemaPath, "utf-8");
@@ -54,4 +58,4 @@ export function dbRun(sql: string, ...params: unknown[]): { lastInsertRowid: num
   return (stmt.run as (...args: any[]) => { lastInsertRowid: number | bigint; changes: number | bigint })(...params);
 }
 
-export { db, DATA_DIR, SNAPSHOTS_DIR, DIFFS_DIR, SCREENSHOTS_DIR };
+export { db, DATA_DIR, SNAPSHOTS_DIR, DIFFS_DIR, SCREENSHOTS_DIR, SSL_SNAPSHOTS_DIR, SSL_HISTORY_DIR };

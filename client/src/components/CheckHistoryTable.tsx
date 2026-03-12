@@ -55,7 +55,7 @@ export default function CheckHistoryTable({ checks, serverId, responseThresholdM
                 <td className="py-2">
                   {check.content_changed === 1 && check.diff_id !== null ? (
                     <Link
-                      to={`/servers/${serverId}/diff/${check.diff_id}`}
+                      to={`/http/servers/${serverId}/diff/${check.diff_id}`}
                       className="text-blue-600 hover:underline text-xs"
                     >
                       View diff

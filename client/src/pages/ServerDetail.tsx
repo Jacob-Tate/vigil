@@ -74,8 +74,8 @@ export default function ServerDetail() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       <div className="mb-6">
-        <Link to="/" className="text-sm text-gray-400 hover:text-blue-600 mb-2 inline-block">
-          ← Dashboard
+        <Link to="/http" className="text-sm text-gray-400 hover:text-blue-600 mb-2 inline-block">
+          ← HTTP Monitor
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div>

@@ -28,7 +28,7 @@ export default function DiffViewer() {
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="mb-6">
         <Link
-          to={`/servers/${serverId}`}
+          to={`/http/servers/${serverId}`}
           className="text-sm text-gray-400 hover:text-blue-600 mb-2 inline-block"
         >
           ← Server detail
