@@ -1,4 +1,5 @@
 import express from "express";
+import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
@@ -35,6 +36,9 @@ const PORT = parseInt(process.env.PORT ?? "3001", 10);
 const DIFF_RETENTION_DAYS = parseInt(process.env.DIFF_RETENTION_DAYS ?? "30", 10);
 
 const app = express();
+
+// Security headers — CSP disabled until frontend asset sources are audited
+app.use(helmet({ contentSecurityPolicy: false }));
 
 const ALLOWED_ORIGIN = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
 app.use(cors({ origin: ALLOWED_ORIGIN, credentials: true }));
