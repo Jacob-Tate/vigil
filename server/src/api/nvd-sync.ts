@@ -64,9 +64,8 @@ async function runFullSync(): Promise<void> {
     console.log("[nvd-sync] Full sync complete — evaluating CVE targets");
     await evaluateAllCveTargets();
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    importState.error = msg;
     console.error("[nvd-sync] Sync failed:", err);
+    importState.error = "Sync failed — check server logs for details";
   } finally {
     importState.isImporting = false;
     importState.currentFeed = null;
@@ -93,9 +92,8 @@ async function runFeedSync(feedName: string): Promise<void> {
     importState.feedsDone = 1;
     await evaluateAllCveTargets();
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    importState.error = msg;
     console.error(`[nvd-sync] Feed ${feedName} failed:`, err);
+    importState.error = "Feed import failed — check server logs for details";
   } finally {
     importState.isImporting = false;
     importState.currentFeed = null;
@@ -153,8 +151,8 @@ router.post("/sync/check", requireAdmin, triggerLimiter, (_req: Request, res: Re
 
       await evaluateAllCveTargets();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      importState.error = msg;
+      console.error("[nvd-sync] Selective sync failed:", err);
+      importState.error = "Sync failed — check server logs for details";
     } finally {
       importState.isImporting = false;
       importState.currentFeed = null;

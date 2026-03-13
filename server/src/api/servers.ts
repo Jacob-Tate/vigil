@@ -242,8 +242,7 @@ router.get(
       res.send(buffer);
     } catch (err) {
       console.error("[screenshot] Failed:", err);
-      const message = err instanceof Error ? err.message : "Failed to capture screenshot";
-      res.status(500).json({ error: message });
+      res.status(500).json({ error: "Failed to capture screenshot" });
     }
   }
 );
