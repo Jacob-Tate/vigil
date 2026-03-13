@@ -6,6 +6,7 @@ import { Server, ServerWithStatus, Check } from "../types";
 import { scheduleServer, unscheduleServer, rescheduleServer, runCheckForServer } from "../monitor/engine";
 import { captureScreenshot, isScreenshotStale, screenshotPath } from "../monitor/screenshotter";
 import { requireAdmin } from "../middleware/auth";
+import { triggerLimiter } from "../middleware/rateLimits";
 
 const router = Router();
 
@@ -180,6 +181,7 @@ router.delete(
 router.post(
   "/:id/check",
   requireAdmin,
+  triggerLimiter,
   param("id").isInt(),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);

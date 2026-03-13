@@ -5,6 +5,7 @@ import { NotificationChannel } from "../types";
 import { sendAlert, NOTIFIER_MAP } from "../notifiers";
 import { requireAdmin } from "../middleware/auth";
 import { encryptConfig, decryptConfig } from "../lib/configCrypto";
+import { triggerLimiter } from "../middleware/rateLimits";
 
 const router = Router();
 
@@ -161,6 +162,7 @@ router.delete(
 router.post(
   "/:id/test",
   requireAdmin,
+  triggerLimiter,
   param("id").isInt(),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);

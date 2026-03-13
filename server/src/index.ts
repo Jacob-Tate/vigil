@@ -21,6 +21,7 @@ import { startSslEngine, stopSslEngine } from "./monitor/ssl-engine";
 import { startCveEngine, stopCveEngine } from "./cve/cve-engine";
 import { startFeedScheduler, stopFeedScheduler } from "./cve/feed-scheduler";
 import { requireAuth, requireAdmin } from "./middleware/auth";
+import { generalLimiter, authLimiter } from "./middleware/rateLimits";
 import { usersRouter } from "./api/users";
 import { seedAdminUser } from "./auth/seed";
 import { ContentDiff } from "./types";
@@ -36,6 +37,10 @@ const ALLOWED_ORIGIN = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
 app.use(cors({ origin: ALLOWED_ORIGIN, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Rate limiting
+app.use("/api", generalLimiter);
+app.use("/api/auth", authLimiter);
 
 // Auth routes (no authentication required)
 app.use("/api/auth", authRouter);

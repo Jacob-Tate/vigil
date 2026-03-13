@@ -9,6 +9,7 @@ import {
 } from "../cve/feed-importer";
 import { evaluateAllCveTargets } from "../cve/cve-engine";
 import { requireAdmin } from "../middleware/auth";
+import { triggerLimiter } from "../middleware/rateLimits";
 
 const router = Router();
 
@@ -103,7 +104,7 @@ async function runFeedSync(feedName: string): Promise<void> {
 }
 
 // POST /api/nvd/sync  — trigger full import
-router.post("/sync", requireAdmin, (_req: Request, res: Response) => {
+router.post("/sync", requireAdmin, triggerLimiter, (_req: Request, res: Response) => {
   if (importState.isImporting) {
     res.status(409).json({ error: "Import already in progress" });
     return;
@@ -113,7 +114,7 @@ router.post("/sync", requireAdmin, (_req: Request, res: Response) => {
 });
 
 // POST /api/nvd/sync/check  — sync only feeds that have changed
-router.post("/sync/check", requireAdmin, (_req: Request, res: Response) => {
+router.post("/sync/check", requireAdmin, triggerLimiter, (_req: Request, res: Response) => {
   if (importState.isImporting) {
     res.status(409).json({ error: "Import already in progress" });
     return;
@@ -168,6 +169,7 @@ router.post("/sync/check", requireAdmin, (_req: Request, res: Response) => {
 router.post(
   "/sync/:feedName",
   requireAdmin,
+  triggerLimiter,
   param("feedName").isString().trim().notEmpty(),
   (req: Request, res: Response) => {
     const errors = validationResult(req);
