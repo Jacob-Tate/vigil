@@ -59,7 +59,7 @@ export default function CveTargetCard({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-2 text-center">
+      <div className="grid grid-cols-3 gap-2 text-center">
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
           <p className="text-lg font-bold text-gray-900 dark:text-white">{target.findings_count}</p>
           <p className="text-xs text-gray-400 dark:text-gray-500">CVEs found</p>
@@ -69,6 +69,14 @@ export default function CveTargetCard({
             {topScore !== null ? topScore.toFixed(1) : "—"}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">Top CVSS</p>
+        </div>
+        <div className={`rounded-lg p-2 ${target.kev_count > 0 ? "bg-red-50 dark:bg-red-900/20" : "bg-gray-50 dark:bg-gray-800"}`}>
+          <p className={`text-lg font-bold ${target.kev_count > 0 ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>
+            {target.kev_count}
+          </p>
+          <p className={`text-xs ${target.kev_count > 0 ? "text-red-400 dark:text-red-500" : "text-gray-400 dark:text-gray-500"}`}>
+            KEVs
+          </p>
         </div>
       </div>
 

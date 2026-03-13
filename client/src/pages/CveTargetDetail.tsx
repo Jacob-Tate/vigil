@@ -190,7 +190,14 @@ export default function CveTargetDetail() {
                   onClick={() => setSelectedCveId(finding.cve_id)}
                 >
                   <td className="px-4 py-3 font-mono text-blue-600 dark:text-blue-400 text-xs whitespace-nowrap">
-                    {finding.cve_id}
+                    <span className="flex items-center gap-1.5">
+                      {finding.cve_id}
+                      {finding.is_kev === 1 && (
+                        <span className="text-xs font-bold bg-red-600 text-white px-1.5 py-0.5 rounded leading-none">
+                          KEV
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <SeverityBadge severity={finding.cvss_severity} />

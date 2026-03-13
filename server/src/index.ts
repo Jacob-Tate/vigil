@@ -21,6 +21,8 @@ import { startEngine, stopEngine } from "./monitor/engine";
 import { startSslEngine, stopSslEngine } from "./monitor/ssl-engine";
 import { startCveEngine, stopCveEngine } from "./cve/cve-engine";
 import { startFeedScheduler, stopFeedScheduler } from "./cve/feed-scheduler";
+import { startKevScheduler, stopKevScheduler } from "./cve/kev-scheduler";
+import { kevRouter } from "./api/kev";
 import { requireAuth, requireAdmin } from "./middleware/auth";
 import { generalLimiter, authLimiter } from "./middleware/rateLimits";
 import { auditLog } from "./middleware/auditLog";
@@ -67,6 +69,7 @@ app.use("/api/nvd/browse", requireAuth, nvdBrowseRouter);
 app.use("/api/nvd", requireAuth, nvdSyncRouter);
 app.use("/api/cve/targets", requireAuth, cveTargetsRouter);
 app.use("/api/cve/findings", requireAuth, cveFindingsRouter);
+app.use("/api/kev", requireAuth, kevRouter);
 app.use("/api/users", requireAdmin, usersRouter);
 
 // Health check
@@ -121,6 +124,7 @@ const server = app.listen(PORT, () => {
   void startSslEngine();
   startCveEngine();
   startFeedScheduler();
+  startKevScheduler();
 });
 
 // Graceful shutdown
@@ -130,6 +134,7 @@ process.on("SIGINT", () => {
   stopSslEngine();
   stopCveEngine();
   stopFeedScheduler();
+  stopKevScheduler();
   server.close(() => process.exit(0));
 });
 
@@ -138,5 +143,6 @@ process.on("SIGTERM", () => {
   stopSslEngine();
   stopCveEngine();
   stopFeedScheduler();
+  stopKevScheduler();
   server.close(() => process.exit(0));
 });

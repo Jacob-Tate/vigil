@@ -186,6 +186,8 @@ export interface CveFinding {
   nvd_url: string | null;
   found_at: string;
   alerted: number; // SQLite boolean: 1 | 0
+  is_kev: number; // SQLite boolean: 1 | 0 (joined from cisa_kev)
+  kev_date_added: string | null;
 }
 
 export interface CveTargetWithStats extends CveTarget {
@@ -193,6 +195,7 @@ export interface CveTargetWithStats extends CveTarget {
   latest_finding: CveFinding | null;
   top_cvss_score: number | null;
   top_cvss_severity: string | null;
+  kev_count: number;
 }
 
 export interface NvdFeedState {
@@ -238,6 +241,40 @@ export interface NvdCveDetail {
   nvd_url: string | null;
   cpe_entries: NvdCpeEntry[];
   references: NvdCveRef[];
+  kev: {
+    date_added: string;
+    vulnerability_name: string | null;
+    required_action: string | null;
+    due_date: string | null;
+    known_ransomware_campaign_use: string | null;
+  } | null;
+}
+
+export interface CisaKevEntry {
+  cve_id: string;
+  vendor_project: string | null;
+  product: string | null;
+  vulnerability_name: string | null;
+  date_added: string | null;
+  short_description: string | null;
+  required_action: string | null;
+  due_date: string | null;
+  known_ransomware_campaign_use: string | null;
+  notes: string | null;
+  synced_at: string;
+}
+
+export interface KevYearStat {
+  year: string;
+  count: number;
+  ransomware_count: number;
+}
+
+export interface KevSyncState {
+  total: number;
+  last_synced_at: string | null;
+  is_syncing: boolean;
+  year_stats: KevYearStat[];
 }
 
 // Auth types

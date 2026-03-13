@@ -20,6 +20,7 @@ import {
   NvdSyncStatus,
   NvdCveDetail,
   PaginatedNvdCves,
+  KevSyncState,
   UserListItem,
   UserFormData,
   UserUpdateData,
@@ -131,6 +132,7 @@ export const searchNvdCves = (params: {
   minScore?: number;
   from?: string;
   to?: string;
+  kev?: boolean;
   page?: number;
   limit?: number;
 }) => {
@@ -140,6 +142,7 @@ export const searchNvdCves = (params: {
   if (params.minScore !== undefined) qs.set("minScore", String(params.minScore));
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
+  if (params.kev) qs.set("kev", "true");
   qs.set("page", String(params.page ?? 1));
   qs.set("limit", String(params.limit ?? 50));
   return request<PaginatedNvdCves>(`/nvd/browse/search?${qs.toString()}`);
@@ -172,6 +175,12 @@ export const getCveFindings = (
   request<PaginatedCveFindings>(
     `/cve/findings?targetId=${targetId}&page=${page}&limit=${limit}&sortBy=${sortBy}&sortDir=${sortDir}`
   );
+
+// KEV Sync
+export const getKevStatus = () =>
+  request<KevSyncState>("/kev/status");
+export const triggerKevSync = () =>
+  request<{ ok: boolean; message: string }>("/kev/sync", { method: "POST" });
 
 // Users (admin only)
 export const getUsers = () => request<UserListItem[]>("/users");

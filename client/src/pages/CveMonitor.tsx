@@ -10,6 +10,7 @@ import {
   triggerCveCheck,
 } from "../api/client";
 import NvdSyncPanel from "../components/NvdSyncPanel";
+import KevSyncPanel from "../components/KevSyncPanel";
 import CveTargetCard from "../components/CveTargetCard";
 import CveTargetForm from "../components/CveTargetForm";
 import { useAuth } from "../hooks/useAuth";
@@ -77,6 +78,12 @@ export default function CveMonitor() {
         </div>
         <div className="flex items-center gap-2">
           <Link
+            to="/cve/browse?kev=true"
+            className="border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          >
+            Browse KEVs
+          </Link>
+          <Link
             to="/cve/browse"
             className="border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
@@ -106,6 +113,7 @@ export default function CveMonitor() {
 
       {/* NVD sync panel */}
       <NvdSyncPanel />
+      <KevSyncPanel />
 
       {/* Stats bar */}
       {targets.length > 0 && (

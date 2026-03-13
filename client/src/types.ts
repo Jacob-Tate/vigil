@@ -205,6 +205,8 @@ export interface CveFinding {
   nvd_url: string | null;
   found_at: string;
   alerted: number;
+  is_kev: number; // 1 | 0
+  kev_date_added: string | null;
 }
 
 export interface CveTargetWithStats extends CveTarget {
@@ -212,6 +214,7 @@ export interface CveTargetWithStats extends CveTarget {
   latest_finding: CveFinding | null;
   top_cvss_score: number | null;
   top_cvss_severity: string | null;
+  kev_count: number;
 }
 
 export interface CveTargetFormData {
@@ -267,6 +270,26 @@ export interface NvdCveDetail {
   nvd_url: string | null;
   cpe_entries: NvdCpeEntry[];
   references?: NvdCveRef[];
+  kev?: {
+    date_added: string;
+    vulnerability_name: string | null;
+    required_action: string | null;
+    due_date: string | null;
+    known_ransomware_campaign_use: string | null;
+  } | null;
+}
+
+export interface KevYearStat {
+  year: string;
+  count: number;
+  ransomware_count: number;
+}
+
+export interface KevSyncState {
+  total: number;
+  last_synced_at: string | null;
+  is_syncing: boolean;
+  year_stats: KevYearStat[];
 }
 
 export interface PaginatedCveFindings {
@@ -279,8 +302,12 @@ export interface PaginatedCveFindings {
   };
 }
 
+export interface NvdCveBrowseRow extends Omit<NvdCveDetail, "cpe_entries" | "references" | "kev"> {
+  is_kev: number; // 1 | 0
+}
+
 export interface PaginatedNvdCves {
-  data: Omit<NvdCveDetail, "cpe_entries">[];
+  data: NvdCveBrowseRow[];
   pagination: {
     page: number;
     limit: number;

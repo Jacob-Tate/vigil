@@ -3,6 +3,38 @@ import { NvdCveDetail, NvdCveRef } from "../types";
 import { getNvdCve } from "../api/client";
 import { format } from "date-fns";
 
+function KevBanner({ kev }: { kev: NonNullable<NvdCveDetail["kev"]> }) {
+  const isRansomware = kev.known_ransomware_campaign_use === "Known";
+  return (
+    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-bold text-red-700 dark:text-red-400 uppercase tracking-wide">
+          ⚠ CISA Known Exploited Vulnerability
+        </span>
+        {isRansomware && (
+          <span className="text-xs font-semibold bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200 px-1.5 py-0.5 rounded">
+            Ransomware
+          </span>
+        )}
+      </div>
+      {kev.vulnerability_name && (
+        <p className="text-xs font-medium text-red-800 dark:text-red-300">{kev.vulnerability_name}</p>
+      )}
+      <div className="flex gap-4 text-xs text-red-700 dark:text-red-400">
+        <span>Added to KEV: <span className="font-medium">{format(new Date(kev.date_added), "MMM d, yyyy")}</span></span>
+        {kev.due_date && (
+          <span>Due: <span className="font-medium">{format(new Date(kev.due_date), "MMM d, yyyy")}</span></span>
+        )}
+      </div>
+      {kev.required_action && (
+        <p className="text-xs text-red-700 dark:text-red-400">
+          <span className="font-semibold">Required action:</span> {kev.required_action}
+        </p>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   cveId: string;
   onClose: () => void;
@@ -108,6 +140,9 @@ export default function CveDetailModal({ cveId, onClose }: Props) {
                   </span>
                 )}
               </div>
+
+              {/* KEV banner */}
+              {detail.kev && <KevBanner kev={detail.kev} />}
 
               {/* Description */}
               <div>

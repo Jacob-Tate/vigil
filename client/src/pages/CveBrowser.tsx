@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { PaginatedNvdCves } from "../types";
 import { searchNvdCves } from "../api/client";
 import CveDetailModal from "../components/CveDetailModal";
@@ -25,11 +25,13 @@ function SeverityBadge({ severity }: { severity: string | null }) {
 }
 
 export default function CveBrowser() {
+  const [searchParams] = useSearchParams();
   const [q, setQ] = useState("");
   const [severity, setSeverity] = useState<Severity>("");
   const [minScore, setMinScore] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [kevOnly, setKevOnly] = useState(searchParams.get("kev") === "true");
   const [page, setPage] = useState(1);
   const [results, setResults] = useState<PaginatedNvdCves | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,6 +50,7 @@ export default function CveBrowser() {
           minScore: minScore ? parseFloat(minScore) : undefined,
           from: from || undefined,
           to: to || undefined,
+          kev: kevOnly || undefined,
           page: p,
           limit: 50,
         });
@@ -60,7 +63,7 @@ export default function CveBrowser() {
         setLoading(false);
       }
     },
-    [q, severity, minScore, from, to]
+    [q, severity, minScore, from, to, kevOnly]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -153,15 +156,24 @@ export default function CveBrowser() {
               className="border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
-          {(q || severity || minScore || from || to) && (
+          <label className="flex items-center gap-1.5 cursor-pointer select-none self-end pb-1.5">
+            <input
+              type="checkbox"
+              checked={kevOnly}
+              onChange={(e) => setKevOnly(e.target.checked)}
+              className="rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500"
+            />
+            <span className="text-xs font-semibold text-red-600 dark:text-red-400">KEV only</span>
+          </label>
+          {(q || severity || minScore || from || to || kevOnly) && (
             <button
               type="button"
               onClick={() => {
                 setQ(""); setSeverity(""); setMinScore("");
-                setFrom(""); setTo("");
+                setFrom(""); setTo(""); setKevOnly(false);
                 setResults(null); setSearched(false);
               }}
-              className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+              className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 self-end pb-1.5"
             >
               Clear
             </button>
@@ -231,7 +243,14 @@ export default function CveBrowser() {
                   onClick={() => setSelectedCveId(cve.cve_id)}
                 >
                   <td className="px-4 py-3 font-mono text-blue-600 dark:text-blue-400 text-xs whitespace-nowrap">
-                    {cve.cve_id}
+                    <span className="flex items-center gap-1.5">
+                      {cve.cve_id}
+                      {cve.is_kev === 1 && (
+                        <span className="text-xs font-bold bg-red-600 text-white px-1.5 py-0.5 rounded leading-none">
+                          KEV
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <SeverityBadge severity={cve.cvss_severity} />

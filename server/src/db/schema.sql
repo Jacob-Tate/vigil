@@ -156,6 +156,22 @@ CREATE TABLE IF NOT EXISTS cve_findings (
 CREATE INDEX IF NOT EXISTS idx_cve_findings_target_id ON cve_findings(target_id);
 CREATE INDEX IF NOT EXISTS idx_cve_findings_found_at  ON cve_findings(found_at DESC);
 
+-- CISA Known Exploited Vulnerabilities catalog
+CREATE TABLE IF NOT EXISTS cisa_kev (
+    cve_id                        TEXT PRIMARY KEY,
+    vendor_project                TEXT,
+    product                       TEXT,
+    vulnerability_name            TEXT,
+    date_added                    TEXT,
+    short_description             TEXT,
+    required_action               TEXT,
+    due_date                      TEXT,
+    known_ransomware_campaign_use TEXT,
+    notes                         TEXT,
+    synced_at                     TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cisa_kev_date_added ON cisa_kev(date_added DESC);
+
 -- Users: admin and viewer roles
 CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
