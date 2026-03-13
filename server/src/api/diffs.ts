@@ -1,8 +1,8 @@
 import { Router, Request, Response } from "express";
 import { query, param, validationResult } from "express-validator";
 import { readFileSync, existsSync } from "fs";
-import { join } from "path";
-import { dbGet, dbAll, DATA_DIR } from "../db/database";
+import { join, resolve } from "path";
+import { dbGet, dbAll, DATA_DIR, DIFFS_DIR } from "../db/database";
 import { ContentDiff } from "../types";
 
 const router = Router();
@@ -49,7 +49,11 @@ router.get(
       return;
     }
 
-    const filePath = join(DATA_DIR, diff.diff_file);
+    const filePath = resolve(join(DATA_DIR, diff.diff_file));
+    if (!filePath.startsWith(DIFFS_DIR + "/") && !filePath.startsWith(DIFFS_DIR + "\\")) {
+      res.status(400).json({ error: "Invalid diff file path" });
+      return;
+    }
     if (!existsSync(filePath)) {
       res.status(404).json({ error: "Diff file not found on disk" });
       return;
