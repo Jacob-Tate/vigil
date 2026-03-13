@@ -10,6 +10,7 @@ import {
   rescheduleTarget,
   runCheckForTarget,
 } from "../monitor/ssl-engine";
+import { requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
@@ -57,6 +58,7 @@ router.get(
 // POST /api/ssl/targets
 router.post(
   "/",
+  requireAdmin,
   body("name").isString().trim().notEmpty(),
   body("host").isString().trim().notEmpty(),
   body("port").optional().isInt({ min: 1, max: 65535 }),
@@ -116,6 +118,7 @@ router.post(
 // PUT /api/ssl/targets/:id
 router.put(
   "/:id",
+  requireAdmin,
   param("id").isInt(),
   body("name").optional().isString().trim().notEmpty(),
   body("host").optional().isString().trim().notEmpty(),
@@ -175,6 +178,7 @@ router.put(
 // DELETE /api/ssl/targets/:id
 router.delete(
   "/:id",
+  requireAdmin,
   param("id").isInt(),
   (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -195,6 +199,7 @@ router.delete(
 // POST /api/ssl/targets/:id/check  — manual trigger
 router.post(
   "/:id/check",
+  requireAdmin,
   param("id").isInt(),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);

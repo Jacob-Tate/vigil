@@ -3,9 +3,11 @@ import toast from "react-hot-toast";
 import { useNvdStatus } from "../hooks/useNvdStatus";
 import { triggerNvdSync } from "../api/client";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "../hooks/useAuth";
 
 export default function NvdSyncPanel() {
   const { status, refetch } = useNvdStatus();
+  const { isAdmin } = useAuth();
   const [syncing, setSyncing] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -94,13 +96,15 @@ export default function NvdSyncPanel() {
               />
             </div>
           )}
-          <button
-            onClick={() => void handleSync()}
-            disabled={syncing || isImporting}
-            className="text-xs bg-gray-900 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isImporting ? "Syncing…" : "Sync All"}
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => void handleSync()}
+              disabled={syncing || isImporting}
+              className="text-xs bg-gray-900 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isImporting ? "Syncing…" : "Sync All"}
+            </button>
+          )}
         </div>
       </div>
 

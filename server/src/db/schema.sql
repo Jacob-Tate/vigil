@@ -155,3 +155,12 @@ CREATE TABLE IF NOT EXISTS cve_findings (
 );
 CREATE INDEX IF NOT EXISTS idx_cve_findings_target_id ON cve_findings(target_id);
 CREATE INDEX IF NOT EXISTS idx_cve_findings_found_at  ON cve_findings(found_at DESC);
+
+-- Users: admin and viewer roles
+CREATE TABLE IF NOT EXISTS users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'viewer',
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);

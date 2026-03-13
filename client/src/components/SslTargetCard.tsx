@@ -4,9 +4,9 @@ import { SslTarget } from "../types";
 
 interface Props {
   target: SslTarget;
-  onCheck: (id: number) => void;
-  onEdit: (target: SslTarget) => void;
-  onDelete: (id: number) => void;
+  onCheck?: (id: number) => void;
+  onEdit?: (target: SslTarget) => void;
+  onDelete?: (id: number) => void;
   checking: boolean;
 }
 
@@ -116,27 +116,37 @@ export default function SslTargetCard({ target, onCheck, onEdit, onDelete, check
         className="border-t border-gray-100 px-4 py-2 flex gap-2"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={() => onCheck(target.id)}
-          disabled={checking}
-          className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-40 font-medium transition-colors"
-        >
-          {checking ? "Checking…" : "Check now"}
-        </button>
-        <span className="text-gray-200">|</span>
-        <button
-          onClick={() => onEdit(target)}
-          className="text-xs text-gray-500 hover:text-gray-800 font-medium transition-colors"
-        >
-          Edit
-        </button>
-        <span className="text-gray-200">|</span>
-        <button
-          onClick={() => onDelete(target.id)}
-          className="text-xs text-red-400 hover:text-red-600 font-medium transition-colors"
-        >
-          Delete
-        </button>
+        {onCheck && (
+          <>
+            <button
+              onClick={() => onCheck(target.id)}
+              disabled={checking}
+              className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-40 font-medium transition-colors"
+            >
+              {checking ? "Checking…" : "Check now"}
+            </button>
+            <span className="text-gray-200">|</span>
+          </>
+        )}
+        {onEdit && (
+          <>
+            <button
+              onClick={() => onEdit(target)}
+              className="text-xs text-gray-500 hover:text-gray-800 font-medium transition-colors"
+            >
+              Edit
+            </button>
+            <span className="text-gray-200">|</span>
+          </>
+        )}
+        {onDelete && (
+          <button
+            onClick={() => onDelete(target.id)}
+            className="text-xs text-red-400 hover:text-red-600 font-medium transition-colors"
+          >
+            Delete
+          </button>
+        )}
       </div>
     </div>
   );

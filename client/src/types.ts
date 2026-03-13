@@ -288,3 +288,33 @@ export interface PaginatedNvdCves {
     pages: number;
   };
 }
+
+
+// Auth types
+
+export type UserRole = "admin" | "viewer";
+
+export interface AuthUser {
+  id: number;
+  username: string;
+  role: UserRole;
+}
+
+export interface UserListItem {
+  id: number;
+  username: string;
+  role: UserRole;
+  created_at: string;
+}
+
+export interface UserFormData {
+  username: string;
+  password: string;
+  role: UserRole;
+}
+
+export interface UserUpdateData {
+  username?: string;
+  password?: string;
+  role?: UserRole;
+}

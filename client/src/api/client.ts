@@ -20,13 +20,21 @@ import {
   NvdSyncStatus,
   NvdCveDetail,
   PaginatedNvdCves,
+  UserListItem,
+  UserFormData,
+  UserUpdateData,
 } from "../types";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
+    credentials: "include",
     headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
   });
+  if (res.status === 401) {
+    window.location.href = "/login";
+    return new Promise<T>(() => undefined);
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText })) as { error?: string };
     throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -164,6 +172,15 @@ export const getCveFindings = (
   request<PaginatedCveFindings>(
     `/cve/findings?targetId=${targetId}&page=${page}&limit=${limit}&sortBy=${sortBy}&sortDir=${sortDir}`
   );
+
+// Users (admin only)
+export const getUsers = () => request<UserListItem[]>("/users");
+export const createUser = (data: UserFormData) =>
+  request<UserListItem>("/users", { method: "POST", body: JSON.stringify(data) });
+export const updateUser = (id: number, data: UserUpdateData) =>
+  request<UserListItem>(`/users/${id}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteUser = (id: number) =>
+  request<void>(`/users/${id}`, { method: "DELETE" });
 
 // Suppress unused import warnings until used
 export type { CveFinding };

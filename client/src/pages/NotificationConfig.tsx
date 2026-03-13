@@ -10,9 +10,11 @@ import {
 import { useNotifications } from "../hooks/useNotifications";
 import NotifierForm from "../components/NotifierForm";
 import { Link } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 export default function NotificationConfig() {
   const { channels, types, loading, error, refresh } = useNotifications();
+  const { isAdmin } = useAuth();
   const [editChannel, setEditChannel] = useState<NotificationChannel | null>(null);
   const [showAdd, setShowAdd] = useState(false);
 
@@ -69,13 +71,15 @@ export default function NotificationConfig() {
         </Link>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-          <button
-            onClick={() => { setEditChannel(null); setShowAdd(true); }}
-            disabled={loading || types.length === 0}
-            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            + Add channel
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => { setEditChannel(null); setShowAdd(true); }}
+              disabled={loading || types.length === 0}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              + Add channel
+            </button>
+          )}
         </div>
       </div>
 
@@ -85,12 +89,14 @@ export default function NotificationConfig() {
       {!loading && channels.length === 0 && (
         <div className="text-center py-16">
           <p className="text-gray-400 mb-4">No notification channels configured</p>
-          <button
-            onClick={() => { setEditChannel(null); setShowAdd(true); }}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Add your first channel
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => { setEditChannel(null); setShowAdd(true); }}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Add your first channel
+            </button>
+          )}
         </div>
       )}
 
@@ -110,42 +116,44 @@ export default function NotificationConfig() {
                 </p>
                 <p className="text-xs text-gray-400">{typeDef?.displayName ?? ch.type}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => void handleTest(ch)}
-                  className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100"
-                >
-                  Test
-                </button>
-                <button
-                  onClick={() => { setEditChannel(ch); setShowAdd(true); }}
-                  className="text-xs px-2 py-1 rounded bg-gray-50 text-gray-600 hover:bg-gray-100"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => void handleToggle(ch)}
-                  className={`text-xs px-2 py-1 rounded ${
-                    ch.active
-                      ? "bg-green-50 text-green-700 hover:bg-green-100"
-                      : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                  }`}
-                >
-                  {ch.active ? "Enabled" : "Disabled"}
-                </button>
-                <button
-                  onClick={() => void handleDelete(ch)}
-                  className="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100"
-                >
-                  Delete
-                </button>
-              </div>
+              {isAdmin && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => void handleTest(ch)}
+                    className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100"
+                  >
+                    Test
+                  </button>
+                  <button
+                    onClick={() => { setEditChannel(ch); setShowAdd(true); }}
+                    className="text-xs px-2 py-1 rounded bg-gray-50 text-gray-600 hover:bg-gray-100"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => void handleToggle(ch)}
+                    className={`text-xs px-2 py-1 rounded ${
+                      ch.active
+                        ? "bg-green-50 text-green-700 hover:bg-green-100"
+                        : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                    }`}
+                  >
+                    {ch.active ? "Enabled" : "Disabled"}
+                  </button>
+                  <button
+                    onClick={() => void handleDelete(ch)}
+                    className="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
-      {showAdd && (
+      {showAdd && isAdmin && (
         <NotifierForm
           types={types}
           channel={editChannel}

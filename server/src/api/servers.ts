@@ -5,6 +5,7 @@ import { dbGet, dbAll, dbRun } from "../db/database";
 import { Server, ServerWithStatus, Check } from "../types";
 import { scheduleServer, unscheduleServer, rescheduleServer, runCheckForServer } from "../monitor/engine";
 import { captureScreenshot, isScreenshotStale, screenshotPath } from "../monitor/screenshotter";
+import { requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
@@ -47,6 +48,7 @@ router.get(
 // POST /api/servers
 router.post(
   "/",
+  requireAdmin,
   body("name").isString().trim().notEmpty(),
   body("url").isURL({ require_tld: false }),
   body("interval_seconds").optional().isInt({ min: 30 }),
@@ -93,6 +95,7 @@ router.post(
 // PUT /api/servers/:id
 router.put(
   "/:id",
+  requireAdmin,
   param("id").isInt(),
   body("name").optional().isString().trim().notEmpty(),
   body("url").optional().isURL({ require_tld: false }),
@@ -152,6 +155,7 @@ router.put(
 // DELETE /api/servers/:id
 router.delete(
   "/:id",
+  requireAdmin,
   param("id").isInt(),
   (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -175,6 +179,7 @@ router.delete(
 // POST /api/servers/:id/check
 router.post(
   "/:id/check",
+  requireAdmin,
   param("id").isInt(),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -244,6 +249,7 @@ router.get(
 // POST /api/servers/:id/reset-baseline
 router.post(
   "/:id/reset-baseline",
+  requireAdmin,
   param("id").isInt(),
   (req: Request, res: Response) => {
     const errors = validationResult(req);

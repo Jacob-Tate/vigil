@@ -3,11 +3,13 @@ import toast from "react-hot-toast";
 import { Server, ServerFormData } from "../types";
 import { createServer, updateServer, deleteServer, triggerCheck } from "../api/client";
 import { useServers } from "../hooks/useServers";
+import { useAuth } from "../hooks/useAuth";
 import ServerCard from "../components/ServerCard";
 import ServerForm from "../components/ServerForm";
 
 export default function Dashboard() {
   const { servers, loading, error, refresh } = useServers();
+  const { isAdmin } = useAuth();
   const [editServer, setEditServer] = useState<Server | null>(null);
   const [showAdd, setShowAdd] = useState(false);
 
@@ -57,12 +59,14 @@ export default function Dashboard() {
             </p>
           )}
         </div>
-        <button
-          onClick={() => { setEditServer(null); setShowAdd(true); }}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          + Add server
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => { setEditServer(null); setShowAdd(true); }}
+            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            + Add server
+          </button>
+        )}
       </div>
 
       {loading && (
@@ -76,12 +80,14 @@ export default function Dashboard() {
       {!loading && servers.length === 0 && (
         <div className="text-center py-16">
           <p className="text-gray-400 text-lg mb-4">No servers yet</p>
-          <button
-            onClick={() => { setEditServer(null); setShowAdd(true); }}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Add your first server
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => { setEditServer(null); setShowAdd(true); }}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Add your first server
+            </button>
+          )}
         </div>
       )}
 
@@ -90,14 +96,14 @@ export default function Dashboard() {
           <ServerCard
             key={server.id}
             server={server}
-            onEdit={(s) => { setEditServer(s); setShowAdd(true); }}
-            onDelete={(s) => void handleDelete(s)}
-            onCheck={(s) => void handleCheck(s)}
+            onEdit={isAdmin ? (s) => { setEditServer(s); setShowAdd(true); } : undefined}
+            onDelete={isAdmin ? (s) => void handleDelete(s) : undefined}
+            onCheck={isAdmin ? (s) => void handleCheck(s) : undefined}
           />
         ))}
       </div>
 
-      {showAdd && (
+      {showAdd && isAdmin && (
         <ServerForm
           server={editServer}
           onSave={handleSave}

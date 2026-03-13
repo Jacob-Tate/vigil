@@ -4,9 +4,9 @@ import { formatDistanceToNow } from "date-fns";
 
 interface Props {
   target: CveTargetWithStats;
-  onCheck: (id: number) => void;
-  onEdit: (target: CveTargetWithStats) => void;
-  onDelete: (id: number) => void;
+  onCheck?: (id: number) => void;
+  onEdit?: (target: CveTargetWithStats) => void;
+  onDelete?: (id: number) => void;
   checking: boolean;
 }
 
@@ -87,25 +87,31 @@ export default function CveTargetCard({
         >
           View
         </Link>
-        <button
-          onClick={() => onCheck(target.id)}
-          disabled={checking}
-          className="flex-1 text-xs border border-gray-200 rounded-lg py-1.5 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
-        >
-          {checking ? "…" : "Check"}
-        </button>
-        <button
-          onClick={() => onEdit(target)}
-          className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 hover:bg-gray-50 transition-colors"
-        >
-          Edit
-        </button>
-        <button
-          onClick={() => onDelete(target.id)}
-          className="text-xs border border-red-100 rounded-lg px-2.5 py-1.5 text-red-400 hover:bg-red-50 transition-colors"
-        >
-          Del
-        </button>
+        {onCheck && (
+          <button
+            onClick={() => onCheck(target.id)}
+            disabled={checking}
+            className="flex-1 text-xs border border-gray-200 rounded-lg py-1.5 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            {checking ? "…" : "Check"}
+          </button>
+        )}
+        {onEdit && (
+          <button
+            onClick={() => onEdit(target)}
+            className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Edit
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={() => onDelete(target.id)}
+            className="text-xs border border-red-100 rounded-lg px-2.5 py-1.5 text-red-400 hover:bg-red-50 transition-colors"
+          >
+            Del
+          </button>
+        )}
       </div>
     </div>
   );

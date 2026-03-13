@@ -10,6 +10,7 @@ import {
 } from "../api/client";
 import SslTargetCard from "../components/SslTargetCard";
 import SslTargetForm from "../components/SslTargetForm";
+import { useAuth } from "../hooks/useAuth";
 
 type SslStatus = "valid" | "expiring" | "expired" | "error" | "pending";
 
@@ -25,6 +26,7 @@ function getStatus(target: SslTarget): SslStatus {
 
 export default function SslMonitor() {
   const { targets, loading, error, refetch } = useSslTargets();
+  const { isAdmin } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState<SslTarget | null>(null);
   const [checkingIds, setCheckingIds] = useState<Set<number>>(new Set());
@@ -92,15 +94,17 @@ export default function SslMonitor() {
           <h1 className="text-2xl font-bold text-gray-900">SSL Monitor</h1>
           <p className="text-sm text-gray-500 mt-0.5">Track SSL certificate health and expiry</p>
         </div>
-        <button
-          onClick={() => { setEditTarget(null); setShowForm(true); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add Target
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => { setEditTarget(null); setShowForm(true); }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Target
+          </button>
+        )}
       </div>
 
       {/* Stats bar */}
@@ -165,16 +169,16 @@ export default function SslMonitor() {
             <SslTargetCard
               key={target.id}
               target={target}
-              onCheck={handleCheck}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              onCheck={isAdmin ? handleCheck : undefined}
+              onEdit={isAdmin ? handleEdit : undefined}
+              onDelete={isAdmin ? handleDelete : undefined}
               checking={checkingIds.has(target.id)}
             />
           ))}
         </div>
       )}
 
-      {showForm && (
+      {showForm && isAdmin && (
         <SslTargetForm
           target={editTarget}
           onSave={handleSave}

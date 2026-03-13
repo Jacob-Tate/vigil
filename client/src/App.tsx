@@ -10,8 +10,15 @@ import SslTargetDetail from "./pages/SslTargetDetail";
 import CveMonitor from "./pages/CveMonitor";
 import CveTargetDetail from "./pages/CveTargetDetail";
 import CveBrowser from "./pages/CveBrowser";
+import LoginPage from "./pages/LoginPage";
+import UsersPage from "./pages/UsersPage";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { AuthProvider } from "./contexts/AuthContext";
+import { useAuth } from "./hooks/useAuth";
 
 function Sidebar() {
+  const { user, isAdmin, logout } = useAuth();
+
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     [
       "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
@@ -69,7 +76,34 @@ function Sidebar() {
           </svg>
           Notifications
         </NavLink>
+
+        {isAdmin && (
+          <NavLink to="/users" className={linkClass}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            Users
+          </NavLink>
+        )}
       </nav>
+
+      {/* User info + sign out */}
+      <div className="p-3 border-t border-gray-200">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs truncate">
+            <span className="font-medium text-gray-700">{user?.username}</span>
+            <span className="ml-1 text-gray-400 capitalize">{user?.role}</span>
+          </div>
+          <button
+            onClick={() => void logout()}
+            className="text-xs text-gray-400 hover:text-red-600 transition-colors shrink-0"
+            title="Sign out"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
     </aside>
   );
 }
@@ -77,24 +111,41 @@ function Sidebar() {
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar />
-        <main className="flex-1 ml-56 min-h-screen">
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/http" element={<Dashboard />} />
-            <Route path="/http/servers/:id" element={<ServerDetail />} />
-            <Route path="/http/servers/:id/diff/:diffId" element={<DiffViewer />} />
-            <Route path="/ssl" element={<SslMonitor />} />
-            <Route path="/ssl/:id" element={<SslTargetDetail />} />
-            <Route path="/cve" element={<CveMonitor />} />
-            <Route path="/cve/browse" element={<CveBrowser />} />
-            <Route path="/cve/:id" element={<CveTargetDetail />} />
-            <Route path="/notifications" element={<NotificationConfig />} />
-          </Routes>
-        </main>
-      </div>
-      <Toaster position="bottom-right" />
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <div className="flex min-h-screen bg-gray-50">
+                  <Sidebar />
+                  <main className="flex-1 ml-56 min-h-screen">
+                    <Routes>
+                      <Route path="/" element={<Landing />} />
+                      <Route path="/http" element={<Dashboard />} />
+                      <Route path="/http/servers/:id" element={<ServerDetail />} />
+                      <Route path="/http/servers/:id/diff/:diffId" element={<DiffViewer />} />
+                      <Route path="/ssl" element={<SslMonitor />} />
+                      <Route path="/ssl/:id" element={<SslTargetDetail />} />
+                      <Route path="/cve" element={<CveMonitor />} />
+                      <Route path="/cve/browse" element={<CveBrowser />} />
+                      <Route path="/cve/:id" element={<CveTargetDetail />} />
+                      <Route path="/notifications" element={<NotificationConfig />} />
+                      <Route path="/users" element={
+                        <ProtectedRoute requireAdmin>
+                          <UsersPage />
+                        </ProtectedRoute>
+                      } />
+                    </Routes>
+                  </main>
+                </div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+        <Toaster position="bottom-right" />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

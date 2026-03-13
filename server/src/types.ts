@@ -239,3 +239,29 @@ export interface NvdCveDetail {
   cpe_entries: NvdCpeEntry[];
   references: NvdCveRef[];
 }
+
+// Auth types
+
+export type UserRole = "admin" | "viewer";
+
+export interface User {
+  id: number;
+  username: string;
+  password_hash: string;
+  role: UserRole;
+  created_at: string;
+}
+
+export interface AuthUser {
+  id: number;
+  username: string;
+  role: UserRole;
+}
+
+export interface JwtPayload {
+  sub: number;
+  username: string;
+  role: UserRole;
+  iat: number;
+  exp: number;
+}

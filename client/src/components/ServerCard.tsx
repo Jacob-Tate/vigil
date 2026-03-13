@@ -7,9 +7,9 @@ import { parseApiDate } from "../utils/date";
 
 interface Props {
   server: Server;
-  onEdit: (server: Server) => void;
-  onDelete: (server: Server) => void;
-  onCheck: (server: Server) => void;
+  onEdit?: (server: Server) => void;
+  onDelete?: (server: Server) => void;
+  onCheck?: (server: Server) => void;
 }
 
 export default function ServerCard({ server, onEdit, onDelete, onCheck }: Props) {
@@ -103,30 +103,36 @@ export default function ServerCard({ server, onEdit, onDelete, onCheck }: Props)
         </div>
 
         <div className="flex gap-2 pt-1 border-t border-gray-100">
-          <button
-            onClick={() => onCheck(server)}
-            className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-          >
-            Check now
-          </button>
+          {onCheck && (
+            <button
+              onClick={() => onCheck(server)}
+              className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+            >
+              Check now
+            </button>
+          )}
           <button
             onClick={openPreview}
             className="text-xs px-2 py-1 rounded bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
           >
             Preview
           </button>
-          <button
-            onClick={() => onEdit(server)}
-            className="text-xs px-2 py-1 rounded bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => onDelete(server)}
-            className="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors ml-auto"
-          >
-            Delete
-          </button>
+          {onEdit && (
+            <button
+              onClick={() => onEdit(server)}
+              className="text-xs px-2 py-1 rounded bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              Edit
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(server)}
+              className="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors ml-auto"
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
 

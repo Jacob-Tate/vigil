@@ -3,6 +3,7 @@ import { body, param, validationResult } from "express-validator";
 import { dbGet, dbAll, dbRun } from "../db/database";
 import { NotificationChannel } from "../types";
 import { sendAlert, NOTIFIER_MAP } from "../notifiers";
+import { requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.get("/types", (_req: Request, res: Response) => {
 // POST /api/notifications
 router.post(
   "/",
+  requireAdmin,
   body("type").isString().notEmpty(),
   body("label").optional().isString(),
   body("config").isObject(),
@@ -79,6 +81,7 @@ router.post(
 // PUT /api/notifications/:id
 router.put(
   "/:id",
+  requireAdmin,
   param("id").isInt(),
   body("label").optional().isString(),
   body("config").optional().isObject(),
@@ -129,6 +132,7 @@ router.put(
 // DELETE /api/notifications/:id
 router.delete(
   "/:id",
+  requireAdmin,
   param("id").isInt(),
   (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -154,6 +158,7 @@ router.delete(
 // POST /api/notifications/:id/test
 router.post(
   "/:id/test",
+  requireAdmin,
   param("id").isInt(),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);

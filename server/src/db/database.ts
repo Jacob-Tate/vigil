@@ -46,6 +46,7 @@ try { db.exec("ALTER TABLE nvd_cves ADD COLUMN references_json TEXT"); } catch {
 // Rename min_cvss_score → min_alert_cvss_score: add new column, copy data, leave old for compat
 try { db.exec("ALTER TABLE cve_targets ADD COLUMN min_alert_cvss_score REAL NOT NULL DEFAULT 7.0"); } catch { /* exists */ }
 try { db.exec("UPDATE cve_targets SET min_alert_cvss_score = min_cvss_score WHERE min_cvss_score IS NOT NULL"); } catch { /* old column may not exist */ }
+try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'viewer'"); } catch { /* exists */ }
 
 // Type-safe query helpers that work around node:sqlite's untyped return values
 export function dbGet<T>(sql: string, ...params: unknown[]): T | undefined {

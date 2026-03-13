@@ -1,9 +1,11 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { join } from "path";
 import { existsSync, unlinkSync } from "fs";
 import { dbAll, dbRun, DATA_DIR } from "./db/database";
+import { authRouter } from "./api/auth";
 import { serversRouter } from "./api/servers";
 import { notificationsRouter } from "./api/notifications";
 import { checksRouter } from "./api/checks";
@@ -18,6 +20,9 @@ import { startEngine, stopEngine } from "./monitor/engine";
 import { startSslEngine, stopSslEngine } from "./monitor/ssl-engine";
 import { startCveEngine, stopCveEngine } from "./cve/cve-engine";
 import { startFeedScheduler, stopFeedScheduler } from "./cve/feed-scheduler";
+import { requireAuth, requireAdmin } from "./middleware/auth";
+import { usersRouter } from "./api/users";
+import { seedAdminUser } from "./auth/seed";
 import { ContentDiff } from "./types";
 
 dotenv.config();
@@ -27,20 +32,27 @@ const DIFF_RETENTION_DAYS = parseInt(process.env.DIFF_RETENTION_DAYS ?? "30", 10
 
 const app = express();
 
-app.use(cors());
+const ALLOWED_ORIGIN = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+app.use(cors({ origin: ALLOWED_ORIGIN, credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
-// API routes
-app.use("/api/servers", serversRouter);
-app.use("/api/notifications", notificationsRouter);
-app.use("/api/checks", checksRouter);
-app.use("/api/diffs", diffsRouter);
-app.use("/api/ssl/targets", sslTargetsRouter);
-app.use("/api/ssl/checks", sslChecksRouter);
-app.use("/api/nvd", nvdSyncRouter);
-app.use("/api/nvd/browse", nvdBrowseRouter);
-app.use("/api/cve/targets", cveTargetsRouter);
-app.use("/api/cve/findings", cveFindingsRouter);
+// Auth routes (no authentication required)
+app.use("/api/auth", authRouter);
+
+// Protected API routes (all require a valid session)
+app.use("/api/servers", requireAuth, serversRouter);
+app.use("/api/notifications", requireAuth, notificationsRouter);
+app.use("/api/checks", requireAuth, checksRouter);
+app.use("/api/diffs", requireAuth, diffsRouter);
+app.use("/api/ssl/targets", requireAuth, sslTargetsRouter);
+app.use("/api/ssl/checks", requireAuth, sslChecksRouter);
+// nvd/browse must be registered before nvd so its routes take precedence
+app.use("/api/nvd/browse", requireAuth, nvdBrowseRouter);
+app.use("/api/nvd", requireAuth, nvdSyncRouter);
+app.use("/api/cve/targets", requireAuth, cveTargetsRouter);
+app.use("/api/cve/findings", requireAuth, cveFindingsRouter);
+app.use("/api/users", requireAdmin, usersRouter);
 
 // Health check
 app.get("/api/health", (_req, res) => {
@@ -82,6 +94,9 @@ function cleanupOldDiffs(): void {
 
 const server = app.listen(PORT, () => {
   console.log(`[server] Listening on http://localhost:${PORT}`);
+
+  // Seed admin user from env vars (no-op if already exists)
+  void seedAdminUser();
 
   // Clean up old diffs on startup
   cleanupOldDiffs();
