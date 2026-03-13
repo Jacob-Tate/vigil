@@ -166,8 +166,15 @@ export async function syncCvelist(): Promise<CvelistSyncResult> {
   const lastHash = stateRow?.sha256 ?? null;
 
   // Determine which files to process
+  if (lastHash && repoVersion && lastHash === repoVersion) {
+    console.log("[cvelist] already up to date, nothing to process");
+    await checkEnrichmentAlerts();
+    await evaluateCveTargetsFromCvelist();
+    return { count: 0, repoVersion };
+  }
+
   let filesToProcess: string[] | null = null;
-  if (lastHash && repoVersion && lastHash !== repoVersion) {
+  if (lastHash && repoVersion) {
     console.log(`[cvelist] computing diff from ${lastHash.slice(0, 8)} to ${repoVersion.slice(0, 8)}...`);
     filesToProcess = await getChangedFiles(repoDir, lastHash);
     if (filesToProcess !== null) {
@@ -220,6 +227,9 @@ export async function syncCvelist(): Promise<CvelistSyncResult> {
     batch = [];
   };
 
+  const LOG_INTERVAL = 10_000;
+  let filesRead = 0;
+
   for (const filePath of jsonFiles) {
     let record: CvelistRecord;
     try {
@@ -234,6 +244,11 @@ export async function syncCvelist(): Promise<CvelistSyncResult> {
 
     batch.push(row);
     if (batch.length >= BATCH_SIZE) flush();
+
+    filesRead++;
+    if (filesRead % LOG_INTERVAL === 0) {
+      console.log(`[cvelist] processed ${filesRead.toLocaleString()} / ${jsonFiles.length.toLocaleString()} files (${count.toLocaleString()} upserted so far)...`);
+    }
   }
   flush();
 
