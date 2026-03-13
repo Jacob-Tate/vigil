@@ -243,8 +243,9 @@ router.get(
     }
 
     const pem = readFileSync(pemPath, "utf-8");
+    const safeHost = target.host.replace(/[^a-zA-Z0-9.\-_]/g, "_");
     res.set("Content-Type", "application/x-pem-file");
-    res.set("Content-Disposition", `attachment; filename="${target.host}.pem"`);
+    res.set("Content-Disposition", `attachment; filename="${safeHost}.pem"`);
     res.send(pem);
   }
 );
