@@ -25,8 +25,10 @@ import { generalLimiter, authLimiter } from "./middleware/rateLimits";
 import { usersRouter } from "./api/users";
 import { seedAdminUser } from "./auth/seed";
 import { ContentDiff } from "./types";
+import { validateEnv } from "./config/validateEnv";
 
 dotenv.config();
+validateEnv();
 
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 const DIFF_RETENTION_DAYS = parseInt(process.env.DIFF_RETENTION_DAYS ?? "30", 10);
