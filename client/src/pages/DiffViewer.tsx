@@ -33,7 +33,7 @@ export default function DiffViewer() {
         >
           ← Server detail
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Content Diff</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Content Diff</h1>
         {diff && (
           <p className="text-sm text-gray-400 mt-1">
             Detected {format(parseApiDate(diff.detected_at), "PPpp")}
@@ -46,14 +46,14 @@ export default function DiffViewer() {
 
       {diff && (
         <>
-          <div className="flex gap-4 mb-4 text-xs text-gray-500 font-mono bg-gray-50 rounded-lg p-3 border">
+          <div className="flex gap-4 mb-4 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
             <div>
-              <span className="text-gray-400">Old hash: </span>
-              <span className="text-gray-700">{diff.old_hash?.slice(0, 16)}…</span>
+              <span className="text-gray-400 dark:text-gray-500">Old hash: </span>
+              <span className="text-gray-700 dark:text-gray-300">{diff.old_hash?.slice(0, 16)}…</span>
             </div>
             <div>
-              <span className="text-gray-400">New hash: </span>
-              <span className="text-gray-700">{diff.new_hash?.slice(0, 16)}…</span>
+              <span className="text-gray-400 dark:text-gray-500">New hash: </span>
+              <span className="text-gray-700 dark:text-gray-300">{diff.new_hash?.slice(0, 16)}…</span>
             </div>
           </div>
           <DiffPanel diffContent={diff.diff_content ?? ""} />

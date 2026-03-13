@@ -10,14 +10,14 @@ import { formatDistanceToNow, format } from "date-fns";
 
 function SeverityBadge({ severity }: { severity: string | null }) {
   const map: Record<string, string> = {
-    CRITICAL: "bg-red-100 text-red-700",
-    HIGH: "bg-orange-100 text-orange-700",
-    MEDIUM: "bg-yellow-100 text-yellow-700",
-    LOW: "bg-blue-100 text-blue-700",
-    NONE: "bg-gray-100 text-gray-500",
+    CRITICAL: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
+    HIGH: "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400",
+    MEDIUM: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400",
+    LOW: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400",
+    NONE: "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400",
   };
-  if (!severity) return <span className="text-gray-400">—</span>;
-  const cls = map[severity.toUpperCase()] ?? "bg-gray-100 text-gray-500";
+  if (!severity) return <span className="text-gray-400 dark:text-gray-500">—</span>;
+  const cls = map[severity.toUpperCase()] ?? "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400";
   return (
     <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${cls}`}>
       {severity}
@@ -68,14 +68,14 @@ export default function CveTargetDetail() {
 
   if (targetLoading) {
     return (
-      <div className="p-6 text-sm text-gray-400 text-center py-16">Loading…</div>
+      <div className="p-6 text-sm text-gray-400 dark:text-gray-500 text-center py-16">Loading…</div>
     );
   }
 
   if (!target) {
     return (
       <div className="p-6">
-        <p className="text-red-600">CVE target not found.</p>
+        <p className="text-red-600 dark:text-red-400">CVE target not found.</p>
         <Link to="/cve" className="text-sm text-blue-600 hover:underline mt-2 block">
           ← Back to CVE Monitor
         </Link>
@@ -98,15 +98,15 @@ export default function CveTargetDetail() {
   return (
     <div className="p-6">
       {/* Breadcrumb */}
-      <Link to="/cve" className="text-sm text-gray-400 hover:text-gray-600 mb-4 block">
+      <Link to="/cve" className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 mb-4 block">
         ← CVE Monitor
       </Link>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{target.name}</h1>
-          <p className="text-sm font-mono text-gray-400 mt-0.5">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{target.name}</h1>
+          <p className="text-sm font-mono text-gray-400 dark:text-gray-500 mt-0.5">
             {target.vendor ? `${target.vendor}:` : ""}
             {target.product}
             {target.version ? `:${target.version}` : " (any version)"}
@@ -122,13 +122,13 @@ export default function CveTargetDetail() {
       </div>
 
       {/* Meta strip */}
-      <div className="flex gap-6 mb-6 text-sm text-gray-500">
+      <div className="flex gap-6 mb-6 text-sm text-gray-500 dark:text-gray-400">
         <span>
-          <span className="text-gray-700 font-medium">{target.findings_count}</span> CVEs found
+          <span className="text-gray-700 dark:text-gray-300 font-medium">{target.findings_count}</span> CVEs found
         </span>
         <span>
           Min Alert CVSS:{" "}
-          <span className="text-gray-700 font-medium">{target.min_alert_cvss_score}</span>
+          <span className="text-gray-700 dark:text-gray-300 font-medium">{target.min_alert_cvss_score}</span>
         </span>
         <span>
           {target.last_checked_at
@@ -139,11 +139,11 @@ export default function CveTargetDetail() {
 
       {/* Findings table */}
       {loading && (
-        <div className="text-sm text-gray-400 text-center py-8">Loading…</div>
+        <div className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">Loading…</div>
       )}
 
       {!loading && (data?.data.length ?? 0) === 0 && (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12 text-gray-400 dark:text-gray-500">
           <p className="text-sm font-medium">No CVEs found yet</p>
           <p className="text-xs mt-1">
             Run a check or sync the NVD database to populate findings.
@@ -152,9 +152,9 @@ export default function CveTargetDetail() {
       )}
 
       {!loading && (data?.data.length ?? 0) > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
               <tr>
                 {(
                   [
@@ -167,48 +167,48 @@ export default function CveTargetDetail() {
                   <th
                     key={key}
                     onClick={() => handleSort(key)}
-                    className={`px-4 py-2.5 text-xs font-medium text-gray-500 cursor-pointer select-none hover:text-gray-700 whitespace-nowrap text-${align}`}
+                    className={`px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-white whitespace-nowrap text-${align}`}
                   >
                     {label}
                     {sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}
                   </th>
                 ))}
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 max-w-xs">Description</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400 max-w-xs">Description</th>
                 <th
                   onClick={() => handleSort("found_at")}
-                  className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 cursor-pointer select-none hover:text-gray-700 whitespace-nowrap"
+                  className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-white whitespace-nowrap"
                 >
                   Found{sortKey === "found_at" ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
               {(data?.data ?? []).map((finding) => (
                 <tr
                   key={finding.id}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
                   onClick={() => setSelectedCveId(finding.cve_id)}
                 >
-                  <td className="px-4 py-3 font-mono text-blue-600 text-xs whitespace-nowrap">
+                  <td className="px-4 py-3 font-mono text-blue-600 dark:text-blue-400 text-xs whitespace-nowrap">
                     {finding.cve_id}
                   </td>
                   <td className="px-4 py-3">
                     <SeverityBadge severity={finding.cvss_severity} />
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-700 font-medium">
+                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300 font-medium">
                     {finding.cvss_score !== null ? finding.cvss_score.toFixed(1) : "—"}
                   </td>
-                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
                     {finding.published_at
                       ? format(new Date(finding.published_at), "MMM d, yyyy")
                       : "—"}
                   </td>
-                  <td className="px-4 py-3 text-gray-600 max-w-xs">
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-xs">
                     <p className="truncate">
                       {finding.description ?? "—"}
                     </p>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
+                  <td className="px-4 py-3 text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap">
                     {formatDistanceToNow(new Date(finding.found_at), { addSuffix: true })}
                   </td>
                 </tr>
@@ -218,22 +218,22 @@ export default function CveTargetDetail() {
 
           {/* Pagination */}
           {pagination && pagination.pages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-              <p className="text-xs text-gray-400">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
                 {pagination.total} total · page {pagination.page} of {pagination.pages}
               </p>
               <div className="flex gap-2">
                 <button
                   disabled={page === 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="text-xs px-3 py-1 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+                  className="text-xs px-3 py-1 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300"
                 >
                   Prev
                 </button>
                 <button
                   disabled={page === pagination.pages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="text-xs px-3 py-1 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50"
+                  className="text-xs px-3 py-1 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300"
                 >
                   Next
                 </button>

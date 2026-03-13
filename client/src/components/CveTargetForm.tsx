@@ -42,24 +42,24 @@ export default function CveTargetForm({ target, onSave, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {target ? "Edit CVE Target" : "Add CVE Target"}
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             Matches CVEs using CPE — vendor:product:version format
           </p>
         </div>
         <form onSubmit={(e) => void handleSubmit(e)} className="px-6 py-4 space-y-4">
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 rounded-lg p-3">
+            <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg p-3">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -67,13 +67,13 @@ export default function CveTargetForm({ target, onSave, onClose }: Props) {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="e.g. Moodle on example.com"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Product <span className="text-red-500">*</span>
               </label>
               <input
@@ -81,12 +81,12 @@ export default function CveTargetForm({ target, onSave, onClose }: Props) {
                 value={form.product}
                 onChange={(e) => setForm({ ...form, product: e.target.value })}
                 placeholder="e.g. moodle, nginx, php"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               />
-              <p className="text-xs text-gray-400 mt-0.5">CPE product name</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">CPE product name</p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Vendor
               </label>
               <input
@@ -96,15 +96,15 @@ export default function CveTargetForm({ target, onSave, onClose }: Props) {
                   setForm({ ...form, vendor: e.target.value || null })
                 }
                 placeholder="same as product"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               />
-              <p className="text-xs text-gray-400 mt-0.5">Optional</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Optional</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Version
               </label>
               <input
@@ -114,11 +114,11 @@ export default function CveTargetForm({ target, onSave, onClose }: Props) {
                   setForm({ ...form, version: e.target.value || null })
                 }
                 placeholder="e.g. 4.5 (blank = any)"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Min Alert CVSS Score
               </label>
               <input
@@ -130,14 +130,14 @@ export default function CveTargetForm({ target, onSave, onClose }: Props) {
                 onChange={(e) =>
                   setForm({ ...form, min_alert_cvss_score: parseFloat(e.target.value) })
                 }
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               />
-              <p className="text-xs text-gray-400 mt-0.5">Alert threshold (0–10)</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Alert threshold (0–10)</p>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Check Interval
             </label>
             <select
@@ -148,7 +148,7 @@ export default function CveTargetForm({ target, onSave, onClose }: Props) {
                   check_interval_seconds: parseInt(e.target.value, 10),
                 })
               }
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             >
               <option value={3600}>Every hour</option>
               <option value={21600}>Every 6 hours</option>
@@ -165,7 +165,7 @@ export default function CveTargetForm({ target, onSave, onClose }: Props) {
               onChange={(e) => setForm({ ...form, active: e.target.checked })}
               className="rounded"
             />
-            <label htmlFor="cve-active" className="text-sm text-gray-700">
+            <label htmlFor="cve-active" className="text-sm text-gray-700 dark:text-gray-300">
               Active monitoring
             </label>
           </div>
@@ -174,7 +174,7 @@ export default function CveTargetForm({ target, onSave, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
             </button>

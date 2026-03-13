@@ -66,11 +66,11 @@ export default function NotificationConfig() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       <div className="mb-6">
-        <Link to="/" className="text-sm text-gray-400 hover:text-blue-600 mb-2 inline-block">
+        <Link to="/" className="text-sm text-gray-400 dark:text-gray-500 hover:text-blue-600 mb-2 inline-block">
           ← Dashboard
         </Link>
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
           {isAdmin && (
             <button
               onClick={() => { setEditChannel(null); setShowAdd(true); }}
@@ -83,12 +83,12 @@ export default function NotificationConfig() {
         </div>
       </div>
 
-      {loading && <p className="text-center py-8 text-gray-400">Loading…</p>}
+      {loading && <p className="text-center py-8 text-gray-400 dark:text-gray-500">Loading…</p>}
       {error && <p className="text-red-500 text-sm">{error}</p>}
 
       {!loading && channels.length === 0 && (
         <div className="text-center py-16">
-          <p className="text-gray-400 mb-4">No notification channels configured</p>
+          <p className="text-gray-400 dark:text-gray-500 mb-4">No notification channels configured</p>
           {isAdmin && (
             <button
               onClick={() => { setEditChannel(null); setShowAdd(true); }}
@@ -106,27 +106,27 @@ export default function NotificationConfig() {
           return (
             <div
               key={ch.id}
-              className={`bg-white rounded-xl border p-4 flex items-center justify-between gap-4 ${
-                ch.active ? "border-gray-200" : "border-gray-100 opacity-60"
+              className={`bg-white dark:bg-gray-900 rounded-xl border p-4 flex items-center justify-between gap-4 ${
+                ch.active ? "border-gray-200 dark:border-gray-700" : "border-gray-100 dark:border-gray-700 opacity-60"
               }`}
             >
               <div>
-                <p className="font-medium text-gray-900">
+                <p className="font-medium text-gray-900 dark:text-white">
                   {ch.label ?? typeDef?.displayName ?? ch.type}
                 </p>
-                <p className="text-xs text-gray-400">{typeDef?.displayName ?? ch.type}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{typeDef?.displayName ?? ch.type}</p>
               </div>
               {isAdmin && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => void handleTest(ch)}
-                    className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100"
+                    className="text-xs px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                   >
                     Test
                   </button>
                   <button
                     onClick={() => { setEditChannel(ch); setShowAdd(true); }}
-                    className="text-xs px-2 py-1 rounded bg-gray-50 text-gray-600 hover:bg-gray-100"
+                    className="text-xs px-2 py-1 rounded bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     Edit
                   </button>
@@ -134,15 +134,15 @@ export default function NotificationConfig() {
                     onClick={() => void handleToggle(ch)}
                     className={`text-xs px-2 py-1 rounded ${
                       ch.active
-                        ? "bg-green-50 text-green-700 hover:bg-green-100"
-                        : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                        ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100"
+                        : "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                     }`}
                   >
                     {ch.active ? "Enabled" : "Disabled"}
                   </button>
                   <button
                     onClick={() => void handleDelete(ch)}
-                    className="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100"
+                    className="text-xs px-2 py-1 rounded bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-100"
                   >
                     Delete
                   </button>

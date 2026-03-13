@@ -14,25 +14,28 @@ import LoginPage from "./pages/LoginPage";
 import UsersPage from "./pages/UsersPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAuth } from "./hooks/useAuth";
+import { useTheme } from "./hooks/useTheme";
 
 function Sidebar() {
   const { user, isAdmin, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     [
       "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
       isActive
-        ? "bg-blue-50 text-blue-700"
-        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
+        ? "bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
+        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100",
     ].join(" ");
 
   return (
-    <aside className="fixed top-0 left-0 h-screen w-56 bg-white border-r border-gray-200 flex flex-col z-40">
+    <aside className="fixed top-0 left-0 h-screen w-56 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40">
       {/* Logo */}
-      <div className="px-4 h-14 flex items-center gap-2 border-b border-gray-200">
+      <div className="px-4 h-14 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
         <img src="/logo.svg" alt="Vigil" className="h-7 w-7 rounded-lg" />
-        <span className="font-bold text-gray-900 tracking-tight">Vigil</span>
+        <span className="font-bold text-gray-900 dark:text-white tracking-tight">Vigil</span>
       </div>
 
       {/* Nav links */}
@@ -88,20 +91,39 @@ function Sidebar() {
         )}
       </nav>
 
-      {/* User info + sign out */}
-      <div className="p-3 border-t border-gray-200">
+      {/* User info + theme toggle + sign out */}
+      <div className="p-3 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between gap-2">
           <div className="text-xs truncate">
-            <span className="font-medium text-gray-700">{user?.username}</span>
-            <span className="ml-1 text-gray-400 capitalize">{user?.role}</span>
+            <span className="font-medium text-gray-700 dark:text-gray-300">{user?.username}</span>
+            <span className="ml-1 text-gray-400 dark:text-gray-500 capitalize">{user?.role}</span>
           </div>
-          <button
-            onClick={() => void logout()}
-            className="text-xs text-gray-400 hover:text-red-600 transition-colors shrink-0"
-            title="Sign out"
-          >
-            Sign out
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={toggleTheme}
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-0.5"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={() => void logout()}
+              className="text-xs text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              title="Sign out"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
     </aside>
@@ -110,42 +132,44 @@ function Sidebar() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <div className="flex min-h-screen bg-gray-50">
-                  <Sidebar />
-                  <main className="flex-1 ml-56 min-h-screen">
-                    <Routes>
-                      <Route path="/" element={<Landing />} />
-                      <Route path="/http" element={<Dashboard />} />
-                      <Route path="/http/servers/:id" element={<ServerDetail />} />
-                      <Route path="/http/servers/:id/diff/:diffId" element={<DiffViewer />} />
-                      <Route path="/ssl" element={<SslMonitor />} />
-                      <Route path="/ssl/:id" element={<SslTargetDetail />} />
-                      <Route path="/cve" element={<CveMonitor />} />
-                      <Route path="/cve/browse" element={<CveBrowser />} />
-                      <Route path="/cve/:id" element={<CveTargetDetail />} />
-                      <Route path="/notifications" element={<NotificationConfig />} />
-                      <Route path="/users" element={
-                        <ProtectedRoute requireAdmin>
-                          <UsersPage />
-                        </ProtectedRoute>
-                      } />
-                    </Routes>
-                  </main>
-                </div>
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-        <Toaster position="bottom-right" />
-      </AuthProvider>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+                    <Sidebar />
+                    <main className="flex-1 ml-56 min-h-screen">
+                      <Routes>
+                        <Route path="/" element={<Landing />} />
+                        <Route path="/http" element={<Dashboard />} />
+                        <Route path="/http/servers/:id" element={<ServerDetail />} />
+                        <Route path="/http/servers/:id/diff/:diffId" element={<DiffViewer />} />
+                        <Route path="/ssl" element={<SslMonitor />} />
+                        <Route path="/ssl/:id" element={<SslTargetDetail />} />
+                        <Route path="/cve" element={<CveMonitor />} />
+                        <Route path="/cve/browse" element={<CveBrowser />} />
+                        <Route path="/cve/:id" element={<CveTargetDetail />} />
+                        <Route path="/notifications" element={<NotificationConfig />} />
+                        <Route path="/users" element={
+                          <ProtectedRoute requireAdmin>
+                            <UsersPage />
+                          </ProtectedRoute>
+                        } />
+                      </Routes>
+                    </main>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+          <Toaster position="bottom-right" />
+        </AuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

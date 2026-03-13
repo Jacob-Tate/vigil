@@ -85,9 +85,9 @@ export default function SslTargetForm({ target, onSave, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {target ? "Edit SSL Target" : "Add SSL Target"}
           </h2>
         </div>
@@ -95,7 +95,7 @@ export default function SslTargetForm({ target, onSave, onClose }: Props) {
         <form onSubmit={(e) => { void handleSubmit(e); }} className="px-6 py-5 space-y-4">
           {/* URL / Host input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               URL or Host
             </label>
             <input
@@ -104,28 +104,28 @@ export default function SslTargetForm({ target, onSave, onClose }: Props) {
               onChange={(e) => setUrlInput(e.target.value)}
               onBlur={handleUrlBlur}
               placeholder="example.com or https://example.com or example.com:8443"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
             />
             <div className="flex gap-2 mt-1.5">
               <div className="flex-1">
-                <label className="text-xs text-gray-500">Host</label>
+                <label className="text-xs text-gray-500 dark:text-gray-400">Host</label>
                 <input
                   type="text"
                   value={form.host}
                   onChange={(e) => setForm((f) => ({ ...f, host: e.target.value }))}
                   required
-                  className="w-full border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               <div className="w-20">
-                <label className="text-xs text-gray-500">Port</label>
+                <label className="text-xs text-gray-500 dark:text-gray-400">Port</label>
                 <input
                   type="number"
                   value={form.port}
                   onChange={(e) => setForm((f) => ({ ...f, port: parseInt(e.target.value, 10) || 443 }))}
                   min={1}
                   max={65535}
-                  className="w-full border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
                 />
               </div>
             </div>
@@ -133,20 +133,20 @@ export default function SslTargetForm({ target, onSave, onClose }: Props) {
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               required
               placeholder="My Site"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
             />
           </div>
 
           {/* Check interval */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Check Interval (seconds)
             </label>
             <input
@@ -154,13 +154,13 @@ export default function SslTargetForm({ target, onSave, onClose }: Props) {
               value={form.check_interval_seconds}
               onChange={(e) => setForm((f) => ({ ...f, check_interval_seconds: parseInt(e.target.value, 10) || 3600 }))}
               min={60}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
           {/* Expiry threshold */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Alert When Expiring Within
             </label>
             <div className="flex gap-2 flex-wrap">
@@ -175,7 +175,7 @@ export default function SslTargetForm({ target, onSave, onClose }: Props) {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                     isPresetActive(p.hours)
                       ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
+                      : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-blue-400"
                   }`}
                 >
                   {p.label}
@@ -187,7 +187,7 @@ export default function SslTargetForm({ target, onSave, onClose }: Props) {
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                   customThreshold
                     ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
+                    : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-blue-400"
                 }`}
               >
                 Custom
@@ -202,9 +202,9 @@ export default function SslTargetForm({ target, onSave, onClose }: Props) {
                     setForm((f) => ({ ...f, expiry_threshold_hours: parseInt(e.target.value, 10) || 1 }))
                   }
                   min={1}
-                  className="w-24 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-24 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 />
-                <span className="text-sm text-gray-500">hours</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">hours</span>
               </div>
             )}
           </div>
@@ -215,13 +215,13 @@ export default function SslTargetForm({ target, onSave, onClose }: Props) {
               type="checkbox"
               checked={form.active}
               onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
-              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm text-gray-700">Active</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Active</span>
           </label>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>
           )}
 
           <div className="flex gap-3 pt-1">
@@ -235,7 +235,7 @@ export default function SslTargetForm({ target, onSave, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-100 text-gray-700 rounded-lg py-2 text-sm font-medium hover:bg-gray-200 transition-colors"
+              className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg py-2 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               Cancel
             </button>

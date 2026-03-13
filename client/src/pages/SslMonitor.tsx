@@ -91,8 +91,8 @@ export default function SslMonitor() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">SSL Monitor</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Track SSL certificate health and expiry</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">SSL Monitor</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Track SSL certificate health and expiry</p>
         </div>
         {isAdmin && (
           <button
@@ -111,32 +111,32 @@ export default function SslMonitor() {
       {targets.length > 0 && (
         <div className="flex gap-4 mb-6 flex-wrap">
           {statusCounts.valid > 0 && (
-            <div className="flex items-center gap-1.5 text-sm text-green-700">
+            <div className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400">
               <span className="w-2 h-2 rounded-full bg-green-500" />
               {statusCounts.valid} Valid
             </div>
           )}
           {statusCounts.expiring > 0 && (
-            <div className="flex items-center gap-1.5 text-sm text-amber-700">
+            <div className="flex items-center gap-1.5 text-sm text-amber-700 dark:text-amber-400">
               <span className="w-2 h-2 rounded-full bg-amber-500" />
               {statusCounts.expiring} Expiring
             </div>
           )}
           {statusCounts.expired > 0 && (
-            <div className="flex items-center gap-1.5 text-sm text-red-700">
+            <div className="flex items-center gap-1.5 text-sm text-red-700 dark:text-red-400">
               <span className="w-2 h-2 rounded-full bg-red-500" />
               {statusCounts.expired} Expired
             </div>
           )}
           {statusCounts.error > 0 && (
-            <div className="flex items-center gap-1.5 text-sm text-red-700">
+            <div className="flex items-center gap-1.5 text-sm text-red-700 dark:text-red-400">
               <span className="w-2 h-2 rounded-full bg-red-400" />
               {statusCounts.error} Error
             </div>
           )}
           {statusCounts.pending > 0 && (
-            <div className="flex items-center gap-1.5 text-sm text-gray-500">
-              <span className="w-2 h-2 rounded-full bg-gray-300" />
+            <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+              <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
               {statusCounts.pending} Pending
             </div>
           )}
@@ -145,16 +145,16 @@ export default function SslMonitor() {
 
       {/* Content */}
       {loading && (
-        <div className="text-sm text-gray-400 py-8 text-center">Loading…</div>
+        <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Loading…</div>
       )}
 
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 rounded-xl p-4">{error}</div>
+        <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl p-4">{error}</div>
       )}
 
       {!loading && !error && targets.length === 0 && (
-        <div className="text-center py-16 text-gray-400">
-          <svg className="w-12 h-12 mx-auto mb-3 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center py-16 text-gray-400 dark:text-gray-500">
+          <svg className="w-12 h-12 mx-auto mb-3 text-gray-200 dark:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>

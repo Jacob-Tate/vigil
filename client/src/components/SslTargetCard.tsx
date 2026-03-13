@@ -23,11 +23,11 @@ function getStatus(target: SslTarget): SslStatus {
 }
 
 const STATUS_STYLES: Record<SslStatus, { dot: string; pill: string; label: string }> = {
-  valid:   { dot: "bg-green-500", pill: "bg-green-100 text-green-700",  label: "Valid" },
-  expiring:{ dot: "bg-amber-500", pill: "bg-amber-100 text-amber-700",  label: "Expiring" },
-  expired: { dot: "bg-red-500",   pill: "bg-red-100 text-red-700",      label: "Expired" },
-  error:   { dot: "bg-red-500",   pill: "bg-red-100 text-red-700",      label: "Error" },
-  pending: { dot: "bg-gray-300",  pill: "bg-gray-100 text-gray-500",    label: "Pending" },
+  valid:   { dot: "bg-green-500", pill: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",  label: "Valid" },
+  expiring:{ dot: "bg-amber-500", pill: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400",  label: "Expiring" },
+  expired: { dot: "bg-red-500",   pill: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",          label: "Expired" },
+  error:   { dot: "bg-red-500",   pill: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",          label: "Error" },
+  pending: { dot: "bg-gray-300",  pill: "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400",          label: "Pending" },
 };
 
 const BORDER_COLOR: Record<SslStatus, string> = {
@@ -48,15 +48,15 @@ export default function SslTargetCard({ target, onCheck, onEdit, onDelete, check
 
   return (
     <div
-      className={`bg-white rounded-xl border border-l-4 ${borderColor} border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
+      className={`bg-white dark:bg-gray-900 rounded-xl border border-l-4 ${borderColor} border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
       onClick={() => navigate(`/ssl/${target.id}`)}
     >
       <div className="p-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="min-w-0">
-            <h3 className="font-semibold text-gray-900 truncate">{target.name}</h3>
-            <p className="text-sm text-gray-500 truncate font-mono">
+            <h3 className="font-semibold text-gray-900 dark:text-white truncate">{target.name}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 truncate font-mono">
               {target.host}:{target.port}
             </p>
           </div>
@@ -69,17 +69,17 @@ export default function SslTargetCard({ target, onCheck, onEdit, onDelete, check
         {/* Stats */}
         <div className="grid grid-cols-2 gap-2 text-sm mb-3">
           <div>
-            <p className="text-xs text-gray-400">Days Remaining</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Days Remaining</p>
             <p className={`font-semibold ${
               check?.days_remaining !== undefined && check?.days_remaining !== null
                 ? check.days_remaining < 0
-                  ? "text-red-600"
+                  ? "text-red-600 dark:text-red-400"
                   : check.days_remaining <= 7
-                  ? "text-red-600"
+                  ? "text-red-600 dark:text-red-400"
                   : check.days_remaining <= 30
-                  ? "text-amber-600"
-                  : "text-green-600"
-                : "text-gray-400"
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-green-600 dark:text-green-400"
+                : "text-gray-400 dark:text-gray-500"
             }`}>
               {check?.days_remaining !== undefined && check?.days_remaining !== null
                 ? `${check.days_remaining}d`
@@ -87,16 +87,16 @@ export default function SslTargetCard({ target, onCheck, onEdit, onDelete, check
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-400">TLS Version</p>
-            <p className="font-medium text-gray-700">{check?.tls_version ?? "—"}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">TLS Version</p>
+            <p className="font-medium text-gray-700 dark:text-gray-300">{check?.tls_version ?? "—"}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-400">Issuer</p>
-            <p className="text-gray-700 truncate">{check?.issuer_cn ?? "—"}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Issuer</p>
+            <p className="text-gray-700 dark:text-gray-300 truncate">{check?.issuer_cn ?? "—"}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-400">Last Check</p>
-            <p className="text-gray-500 text-xs">
+            <p className="text-xs text-gray-400 dark:text-gray-500">Last Check</p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs">
               {target.last_checked_at
                 ? formatDistanceToNow(new Date(target.last_checked_at), { addSuffix: true })
                 : "Never"}
@@ -105,7 +105,7 @@ export default function SslTargetCard({ target, onCheck, onEdit, onDelete, check
         </div>
 
         {check?.error && (
-          <p className="text-xs text-red-600 bg-red-50 rounded p-2 mb-3 truncate">
+          <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded p-2 mb-3 truncate">
             {check.error}
           </p>
         )}
@@ -113,7 +113,7 @@ export default function SslTargetCard({ target, onCheck, onEdit, onDelete, check
 
       {/* Actions */}
       <div
-        className="border-t border-gray-100 px-4 py-2 flex gap-2"
+        className="border-t border-gray-100 dark:border-gray-700 px-4 py-2 flex gap-2"
         onClick={(e) => e.stopPropagation()}
       >
         {onCheck && (
@@ -121,22 +121,22 @@ export default function SslTargetCard({ target, onCheck, onEdit, onDelete, check
             <button
               onClick={() => onCheck(target.id)}
               disabled={checking}
-              className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-40 font-medium transition-colors"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 disabled:opacity-40 font-medium transition-colors"
             >
               {checking ? "Checking…" : "Check now"}
             </button>
-            <span className="text-gray-200">|</span>
+            <span className="text-gray-200 dark:text-gray-700">|</span>
           </>
         )}
         {onEdit && (
           <>
             <button
               onClick={() => onEdit(target)}
-              className="text-xs text-gray-500 hover:text-gray-800 font-medium transition-colors"
+              className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white font-medium transition-colors"
             >
               Edit
             </button>
-            <span className="text-gray-200">|</span>
+            <span className="text-gray-200 dark:text-gray-700">|</span>
           </>
         )}
         {onDelete && (

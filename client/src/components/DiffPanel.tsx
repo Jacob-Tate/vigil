@@ -23,13 +23,13 @@ export default function DiffPanel({ diffContent }: Props) {
   }, [diffContent]);
 
   if (!diffContent) {
-    return <p className="text-gray-400 text-sm text-center py-8">No diff content available.</p>;
+    return <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">No diff content available.</p>;
   }
 
   return (
     <div
       ref={containerRef}
-      className="text-sm overflow-x-auto rounded-lg border border-gray-200"
+      className="text-sm overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700"
     />
   );
 }

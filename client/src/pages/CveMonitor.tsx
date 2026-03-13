@@ -70,15 +70,15 @@ export default function CveMonitor() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">CVE Monitor</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">CVE Monitor</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             Track vulnerabilities for your technology stack
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             to="/cve/browse"
-            className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             Browse CVEs
           </Link>
@@ -109,27 +109,27 @@ export default function CveMonitor() {
 
       {/* Stats bar */}
       {targets.length > 0 && (
-        <div className="flex gap-4 mb-6 text-sm text-gray-600">
+        <div className="flex gap-4 mb-6 text-sm text-gray-600 dark:text-gray-400">
           <span>{targets.length} target{targets.length !== 1 ? "s" : ""}</span>
           {totalFindings > 0 && (
-            <span className="text-orange-600">{totalFindings} total CVEs found</span>
+            <span className="text-orange-600 dark:text-orange-400">{totalFindings} total CVEs found</span>
           )}
         </div>
       )}
 
       {/* Content */}
       {loading && (
-        <div className="text-sm text-gray-400 py-8 text-center">Loading…</div>
+        <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Loading…</div>
       )}
 
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 rounded-xl p-4">{error}</div>
+        <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl p-4">{error}</div>
       )}
 
       {!loading && !error && targets.length === 0 && (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-gray-400 dark:text-gray-500">
           <svg
-            className="w-12 h-12 mx-auto mb-3 text-gray-200"
+            className="w-12 h-12 mx-auto mb-3 text-gray-200 dark:text-gray-700"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

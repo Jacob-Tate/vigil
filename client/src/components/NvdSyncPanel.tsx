@@ -45,13 +45,13 @@ export default function NvdSyncPanel() {
   const isImporting = status?.isImporting ?? false;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl mb-6">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl mb-6">
       {/* Header row */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setExpanded((e) => !e)}
-            className="text-sm font-medium text-gray-700 flex items-center gap-1.5 hover:text-gray-900"
+            className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5 hover:text-gray-900 dark:hover:text-white"
           >
             <svg
               className={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-90" : ""}`}
@@ -70,16 +70,16 @@ export default function NvdSyncPanel() {
           </button>
 
           {isImporting ? (
-            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-medium animate-pulse">
+            <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full font-medium animate-pulse">
               Importing {status?.currentFeed ?? "…"} ({status?.feedsDone}/{status?.feedsTotal})
             </span>
           ) : totalCves > 0 ? (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               {totalCves.toLocaleString()} CVEs
               {lastImport ? ` · synced ${formatDistanceToNow(new Date(lastImport), { addSuffix: true })}` : ""}
             </span>
           ) : (
-            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
+            <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full font-medium">
               No data — sync required
             </span>
           )}
@@ -87,7 +87,7 @@ export default function NvdSyncPanel() {
 
         <div className="flex items-center gap-2">
           {isImporting && (
-            <div className="w-32 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="w-32 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-500 transition-all"
                 style={{
@@ -100,7 +100,7 @@ export default function NvdSyncPanel() {
             <button
               onClick={() => void handleSync()}
               disabled={syncing || isImporting}
-              className="text-xs bg-gray-900 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-xs bg-gray-900 dark:bg-gray-700 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isImporting ? "Syncing…" : "Sync All"}
             </button>
@@ -110,30 +110,30 @@ export default function NvdSyncPanel() {
 
       {/* Error banner */}
       {status?.error && (
-        <div className="px-4 pb-3 text-xs text-red-600">
+        <div className="px-4 pb-3 text-xs text-red-600 dark:text-red-400">
           Last sync error: {status.error}
         </div>
       )}
 
       {/* Expandable feed state table */}
       {expanded && status && (
-        <div className="border-t border-gray-100 px-4 pb-3 pt-2 max-h-64 overflow-y-auto">
+        <div className="border-t border-gray-100 dark:border-gray-700 px-4 pb-3 pt-2 max-h-64 overflow-y-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-gray-400 text-left">
+              <tr className="text-gray-400 dark:text-gray-500 text-left">
                 <th className="pb-1 font-medium">Feed</th>
                 <th className="pb-1 font-medium text-right">CVEs</th>
                 <th className="pb-1 font-medium text-right">Last imported</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
               {status.feedStates.map((f) => (
                 <tr key={f.feed_name}>
-                  <td className="py-0.5 text-gray-700 font-mono">{f.feed_name}</td>
-                  <td className="py-0.5 text-right text-gray-500">
+                  <td className="py-0.5 text-gray-700 dark:text-gray-300 font-mono">{f.feed_name}</td>
+                  <td className="py-0.5 text-right text-gray-500 dark:text-gray-400">
                     {f.total_cves?.toLocaleString() ?? "—"}
                   </td>
-                  <td className="py-0.5 text-right text-gray-400">
+                  <td className="py-0.5 text-right text-gray-400 dark:text-gray-500">
                     {f.imported_at
                       ? formatDistanceToNow(new Date(f.imported_at), { addSuffix: true })
                       : "never"}
@@ -142,7 +142,7 @@ export default function NvdSyncPanel() {
               ))}
               {status.feedStates.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-2 text-center text-gray-400">
+                  <td colSpan={3} className="py-2 text-center text-gray-400 dark:text-gray-500">
                     No feeds imported yet
                   </td>
                 </tr>

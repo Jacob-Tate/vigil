@@ -73,10 +73,10 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">{isEdit ? "Edit user" : "Add user"}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <h2 className="font-semibold text-gray-900 dark:text-white">{isEdit ? "Edit user" : "Add user"}</h2>
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -85,24 +85,24 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
 
         <form onSubmit={(e) => void handleSubmit(e)} className="px-6 py-4 space-y-4">
           {err && (
-            <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{err}</div>
+            <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{err}</div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
             <input
               type="text"
               value={form.username}
               onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
               required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               placeholder="username"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password{isEdit && <span className="text-gray-400 font-normal"> (leave blank to keep current)</span>}
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Password{isEdit && <span className="text-gray-400 dark:text-gray-500 font-normal"> (leave blank to keep current)</span>}
             </label>
             <input
               type="password"
@@ -110,17 +110,17 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
               required={!isEdit}
               minLength={isEdit ? undefined : 8}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               placeholder={isEdit ? "••••••••" : "min 8 characters"}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
             <select
               value={form.role}
               onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as UserRole }))}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             >
               <option value="viewer">Viewer — read-only access</option>
               <option value="admin">Admin — full access</option>
@@ -131,7 +131,7 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
             </button>
@@ -197,11 +197,11 @@ export default function UsersPage() {
 
   const roleLabel = (role: UserRole) =>
     role === "admin" ? (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
         Admin
       </span>
     ) : (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
         Viewer
       </span>
     );
@@ -210,8 +210,8 @@ export default function UsersPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage who can access Vigil</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Users</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage who can access Vigil</p>
         </div>
         <button
           onClick={openCreate}
@@ -224,45 +224,45 @@ export default function UsersPage() {
         </button>
       </div>
 
-      {loading && <div className="text-sm text-gray-400 py-8 text-center">Loading…</div>}
-      {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl p-4">{error}</div>}
+      {loading && <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Loading…</div>}
+      {error && <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl p-4">{error}</div>}
 
       {!loading && !error && (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-left text-xs text-gray-400 uppercase tracking-wider">
+              <tr className="border-b border-gray-100 dark:border-gray-700 text-left text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                 <th className="px-4 py-3 font-medium">Username</th>
                 <th className="px-4 py-3 font-medium">Role</th>
                 <th className="px-4 py-3 font-medium">Created</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
               {users.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">
+                <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                     {u.username}
                     {u.id === currentUser?.id && (
-                      <span className="ml-2 text-xs text-gray-400">(you)</span>
+                      <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">(you)</span>
                     )}
                   </td>
                   <td className="px-4 py-3">{roleLabel(u.role)}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">
+                  <td className="px-4 py-3 text-gray-400 dark:text-gray-500 text-xs">
                     {formatDistanceToNow(new Date(u.created_at), { addSuffix: true })}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => openEdit(u)}
-                        className="text-xs px-2 py-1 rounded bg-gray-50 text-gray-600 hover:bg-gray-100"
+                        className="text-xs px-2 py-1 rounded bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         Edit
                       </button>
                       {u.id !== currentUser?.id && (
                         <button
                           onClick={() => void handleDelete(u)}
-                          className="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100"
+                          className="text-xs px-2 py-1 rounded bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-100"
                         >
                           Delete
                         </button>
@@ -273,7 +273,7 @@ export default function UsersPage() {
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                     No users found
                   </td>
                 </tr>

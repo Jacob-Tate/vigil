@@ -52,9 +52,9 @@ export default function Dashboard() {
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Monitor</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Monitor</h1>
           {servers.length > 0 && (
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               {upCount} up · {downCount} down · {servers.length - upCount - downCount} pending
             </p>
           )}
@@ -74,12 +74,12 @@ export default function Dashboard() {
       )}
 
       {error && (
-        <div className="bg-red-50 text-red-700 rounded-xl p-4 text-sm">{error}</div>
+        <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-xl p-4 text-sm">{error}</div>
       )}
 
       {!loading && servers.length === 0 && (
         <div className="text-center py-16">
-          <p className="text-gray-400 text-lg mb-4">No servers yet</p>
+          <p className="text-gray-400 dark:text-gray-500 text-lg mb-4">No servers yet</p>
           {isAdmin && (
             <button
               onClick={() => { setEditServer(null); setShowAdd(true); }}

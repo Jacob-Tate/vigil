@@ -10,6 +10,7 @@ import {
 import { format } from "date-fns";
 import { Check } from "../types";
 import { parseApiDate } from "../utils/date";
+import { useTheme } from "../hooks/useTheme";
 
 interface Props {
   checks: Check[];
@@ -23,8 +24,17 @@ interface ChartPoint {
 }
 
 export default function ResponseTimeChart({ checks, thresholdMs }: Props) {
+  const { theme } = useTheme();
+
+  const tooltipStyle =
+    theme === "dark"
+      ? { fontSize: 12, borderRadius: 8, border: "1px solid #374151", background: "#1f2937", color: "#f9fafb" }
+      : { fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" };
+
+  const tickColor = theme === "dark" ? "#6b7280" : "#9ca3af";
+
   if (checks.length === 0) {
-    return <p className="text-gray-400 text-sm text-center py-8">No data yet.</p>;
+    return <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">No data yet.</p>;
   }
 
   // Show last 50 checks, oldest first
@@ -48,19 +58,19 @@ export default function ResponseTimeChart({ checks, thresholdMs }: Props) {
         </defs>
         <XAxis
           dataKey="time"
-          tick={{ fontSize: 10, fill: "#9ca3af" }}
+          tick={{ fontSize: 10, fill: tickColor }}
           tickLine={false}
           axisLine={false}
           interval="preserveStartEnd"
         />
         <YAxis
-          tick={{ fontSize: 10, fill: "#9ca3af" }}
+          tick={{ fontSize: 10, fill: tickColor }}
           tickLine={false}
           axisLine={false}
           unit="ms"
         />
         <Tooltip
-          contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+          contentStyle={tooltipStyle}
           formatter={(value: number) => [`${value}ms`, "Response time"]}
         />
         <ReferenceLine
