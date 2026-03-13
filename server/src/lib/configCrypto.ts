@@ -1,13 +1,25 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
 
 const ALGORITHM = "aes-256-gcm";
 const ENC_PREFIX = "enc:";
 
+// Fixed salt — not secret, just ensures domain separation from other HKDF uses
+const HKDF_SALT = Buffer.from("vigil-notifications-v1");
+const HKDF_INFO = Buffer.from("aes-256-gcm-key");
+
+/**
+ * Derives the AES-256-GCM key from NOTIFICATIONS_ENCRYPTION_KEY using HKDF-SHA256.
+ *
+ * NOTIFICATIONS_ENCRYPTION_KEY must be a securely generated random value, e.g.:
+ *   openssl rand -hex 32
+ *
+ * Using a short or memorable passphrase is unsafe — HKDF provides no iteration
+ * count, so offline brute-force against a weak input remains cheap.
+ */
 function getKey(): Buffer | null {
   const raw = process.env["NOTIFICATIONS_ENCRYPTION_KEY"];
   if (!raw) return null;
-  // Derive a stable 32-byte key from the env var string
-  return createHash("sha256").update(raw).digest();
+  return Buffer.from(hkdfSync("sha256", raw, HKDF_SALT, HKDF_INFO, 32));
 }
 
 /**

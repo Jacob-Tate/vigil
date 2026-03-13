@@ -26,6 +26,14 @@ export function validateEnv(): void {
     issues.push("ADMIN_PASSWORD is still the example placeholder — set a strong password");
   }
 
+  // NOTIFICATIONS_ENCRYPTION_KEY should always be set — without it credentials are stored plaintext
+  if (!process.env.NOTIFICATIONS_ENCRYPTION_KEY) {
+    issues.push(
+      "NOTIFICATIONS_ENCRYPTION_KEY is not set — notification credentials " +
+      "(webhook URLs, API keys) will be stored in plaintext"
+    );
+  }
+
   // BASE_URL must not be localhost in production — alert links would be unreachable
   const baseUrl = process.env.BASE_URL ?? "http://localhost:5173";
   if (isProd && baseUrl.includes("localhost")) {
