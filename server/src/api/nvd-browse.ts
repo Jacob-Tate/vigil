@@ -50,33 +50,22 @@ router.get(
     );
     const offset = (page - 1) * limit;
 
-    // Build dynamic WHERE clauses
-    const conditions: string[] = [];
-    const params: unknown[] = [];
+    // Build dynamic WHERE clauses using [sqlFragment, ...bindParams] tuples.
+    // The SQL fragment must always be a string literal — user input belongs
+    // only in the bind params positions, never in the fragment itself.
+    type Condition = [string, ...unknown[]];
+    const clauses: Condition[] = [];
 
-    if (q) {
-      conditions.push("(cve_id LIKE ? OR description LIKE ?)");
-      params.push(`%${q}%`, `%${q}%`);
-    }
-    if (severity) {
-      conditions.push("cvss_severity = ?");
-      params.push(severity);
-    }
-    if (minScore !== null) {
-      conditions.push("cvss_score >= ?");
-      params.push(minScore);
-    }
-    if (from) {
-      conditions.push("published_at >= ?");
-      params.push(from);
-    }
-    if (to) {
-      conditions.push("published_at <= ?");
-      params.push(to + "T23:59:59");
-    }
+    if (q) clauses.push(["(cve_id LIKE ? OR description LIKE ?)", `%${q}%`, `%${q}%`]);
+    if (severity) clauses.push(["cvss_severity = ?", severity]);
+    if (minScore !== null) clauses.push(["cvss_score >= ?", minScore]);
+    if (from) clauses.push(["published_at >= ?", from]);
+    if (to) clauses.push(["published_at <= ?", `${to}T23:59:59`]);
 
-    const where =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const where = clauses.length > 0
+      ? `WHERE ${clauses.map(([fragment]) => fragment).join(" AND ")}`
+      : "";
+    const params = clauses.flatMap(([, ...p]) => p);
 
     const total =
       dbGet<{ cnt: number }>(
