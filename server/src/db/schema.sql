@@ -172,6 +172,17 @@ CREATE TABLE IF NOT EXISTS cisa_kev (
 );
 CREATE INDEX IF NOT EXISTS idx_cisa_kev_date_added ON cisa_kev(date_added DESC);
 
+-- CISA Vulnrichment SSVC scores
+CREATE TABLE IF NOT EXISTS cisa_ssvc (
+    cve_id           TEXT PRIMARY KEY,
+    exploitation     TEXT,   -- none | poc | active
+    automatable      TEXT,   -- yes | no
+    technical_impact TEXT,   -- partial | total
+    timestamp        TEXT,
+    synced_at        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cisa_ssvc_exploitation ON cisa_ssvc(exploitation);
+
 -- Users: admin and viewer roles
 CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,

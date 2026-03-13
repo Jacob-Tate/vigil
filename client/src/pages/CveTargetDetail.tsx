@@ -197,6 +197,16 @@ export default function CveTargetDetail() {
                           KEV
                         </span>
                       )}
+                      {finding.ssvc_exploitation === "active" && (
+                        <span className="text-xs font-bold bg-red-600 text-white px-1.5 py-0.5 rounded leading-none">
+                          ACTIVE
+                        </span>
+                      )}
+                      {finding.ssvc_exploitation === "poc" && (
+                        <span className="text-xs font-bold bg-orange-500 text-white px-1.5 py-0.5 rounded leading-none">
+                          PoC
+                        </span>
+                      )}
                     </span>
                   </td>
                   <td className="px-4 py-3">

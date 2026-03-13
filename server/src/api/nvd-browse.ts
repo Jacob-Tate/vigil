@@ -15,6 +15,13 @@ interface NvdCveRow {
   nvd_url: string | null;
   references_json: string | null;
   is_kev: number | null;
+  ssvc_exploitation: string | null;
+}
+
+interface SsvcRow {
+  exploitation: string | null;
+  automatable: string | null;
+  technical_impact: string | null;
 }
 
 interface KevRow {
@@ -91,9 +98,11 @@ router.get(
     const data = dbAll<NvdCveRow>(
       `SELECT c.cve_id, c.published_at, c.last_modified_at, c.cvss_score,
               c.cvss_severity, c.description, c.nvd_url,
-              CASE WHEN k.cve_id IS NOT NULL THEN 1 ELSE 0 END AS is_kev
+              CASE WHEN k.cve_id IS NOT NULL THEN 1 ELSE 0 END AS is_kev,
+              s.exploitation AS ssvc_exploitation
        FROM nvd_cves c
        LEFT JOIN cisa_kev k ON c.cve_id = k.cve_id
+       LEFT JOIN cisa_ssvc s ON c.cve_id = s.cve_id
        ${where}
        ORDER BY c.published_at DESC
        LIMIT ? OFFSET ?`,
@@ -158,6 +167,11 @@ router.get(
       cveId
     );
 
+    const ssvcRow = dbGet<SsvcRow>(
+      "SELECT exploitation, automatable, technical_impact FROM cisa_ssvc WHERE cve_id = ?",
+      cveId
+    );
+
     const detail: NvdCveDetail = {
       cve_id: row.cve_id,
       published_at: row.published_at,
@@ -175,6 +189,13 @@ router.get(
             required_action: kevRow.required_action,
             due_date: kevRow.due_date,
             known_ransomware_campaign_use: kevRow.known_ransomware_campaign_use,
+          }
+        : null,
+      ssvc: ssvcRow
+        ? {
+            exploitation: ssvcRow.exploitation,
+            automatable: ssvcRow.automatable,
+            technical_impact: ssvcRow.technical_impact,
           }
         : null,
     };

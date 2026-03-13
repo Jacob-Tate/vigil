@@ -21,6 +21,7 @@ import {
   NvdCveDetail,
   PaginatedNvdCves,
   KevSyncState,
+  VulnrichmentSyncState,
   UserListItem,
   UserFormData,
   UserUpdateData,
@@ -181,6 +182,12 @@ export const getKevStatus = () =>
   request<KevSyncState>("/kev/status");
 export const triggerKevSync = () =>
   request<{ ok: boolean; message: string }>("/kev/sync", { method: "POST" });
+
+// Vulnrichment / SSVC Sync
+export const getVulnrichmentStatus = () =>
+  request<VulnrichmentSyncState>("/vulnrichment/status");
+export const triggerVulnrichmentSync = () =>
+  request<{ ok: boolean; message: string }>("/vulnrichment/sync", { method: "POST" });
 
 // Users (admin only)
 export const getUsers = () => request<UserListItem[]>("/users");

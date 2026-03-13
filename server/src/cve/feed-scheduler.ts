@@ -1,5 +1,6 @@
 import { checkMeta, importFeed, needsUpdate } from "./feed-importer";
 import { evaluateAllCveTargets } from "./cve-engine";
+import { checkEnrichmentAlerts } from "./enrichment-alerter";
 
 const hours = Math.max(1, parseFloat(process.env["NVD_SYNC_INTERVAL_HOURS"] ?? "2"));
 const CHECK_INTERVAL_MS = hours * 60 * 60 * 1000;
@@ -19,6 +20,7 @@ async function runScheduledUpdate(): Promise<void> {
     const count = await importFeed("modified");
     console.log(`[feed-scheduler] imported ${count} CVEs from modified feed`);
     await evaluateAllCveTargets();
+    await checkEnrichmentAlerts();
   } catch (err) {
     console.error("[feed-scheduler] error during scheduled update:", err);
   }

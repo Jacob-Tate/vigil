@@ -24,6 +24,7 @@
     "js-beautify": "^1.15.4",
     "jsonwebtoken": "^9.0.3",
     "puppeteer-core": "^24.39.0",
+    "simple-git": "^3.33.0",
     "stream-json": "^1.9.1"
   },
   "devDependencies": {

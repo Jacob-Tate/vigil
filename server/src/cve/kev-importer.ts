@@ -1,6 +1,7 @@
 import axios from "axios";
 import { db, dbAll, dbGet } from "../db/database";
 import { KevSyncState, KevYearStat } from "../types";
+import { checkEnrichmentAlerts } from "./enrichment-alerter";
 
 const KEV_URL =
   "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json";
@@ -79,6 +80,8 @@ export async function syncKev(): Promise<KevSyncResult> {
     db.exec("ROLLBACK");
     throw err;
   }
+
+  await checkEnrichmentAlerts();
 
   return {
     count: vulns.length,

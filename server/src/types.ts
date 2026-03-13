@@ -59,7 +59,9 @@ export type AlertType =
   | "SSL_EXPIRED"
   | "SSL_ERROR"
   | "SSL_CHANGED"
-  | "CVE_NEW";
+  | "CVE_NEW"
+  | "CVE_EXPLOIT_ESCALATION"
+  | "CVE_UPDATED";
 
 export type SslAlertType = "SSL_EXPIRING" | "SSL_EXPIRED" | "SSL_ERROR" | "SSL_CHANGED";
 
@@ -82,6 +84,10 @@ export interface AlertPayload {
   cvssSeverity?: string | null;
   // Present when multiple CVEs are batched into one digest alert
   cveDigest?: Array<{ cveId: string; cvssScore: number | null; cvssSeverity: string | null }>;
+  // For CVE_EXPLOIT_ESCALATION
+  previousExploitation?: string | null;
+  // For CVE_UPDATED: list of field names that changed
+  changedFields?: string[];
 }
 
 // SSL Monitor types
@@ -188,6 +194,13 @@ export interface CveFinding {
   alerted: number; // SQLite boolean: 1 | 0
   is_kev: number; // SQLite boolean: 1 | 0 (joined from cisa_kev)
   kev_date_added: string | null;
+  // SSVC enrichment (joined from cisa_ssvc)
+  ssvc_exploitation: string | null;   // none | poc | active
+  ssvc_automatable: string | null;    // yes | no
+  ssvc_technical_impact: string | null; // partial | total
+  // Alert state tracking
+  enrichment_fingerprint: string | null;
+  exploitation_alert_sent: string | null;
 }
 
 export interface CveTargetWithStats extends CveTarget {
@@ -248,6 +261,11 @@ export interface NvdCveDetail {
     due_date: string | null;
     known_ransomware_campaign_use: string | null;
   } | null;
+  ssvc: {
+    exploitation: string | null;
+    automatable: string | null;
+    technical_impact: string | null;
+  } | null;
 }
 
 export interface CisaKevEntry {
@@ -275,6 +293,18 @@ export interface KevSyncState {
   last_synced_at: string | null;
   is_syncing: boolean;
   year_stats: KevYearStat[];
+}
+
+export interface SsvcExploitationStat {
+  exploitation: string;
+  count: number;
+}
+
+export interface VulnrichmentSyncState {
+  total: number;
+  last_synced_at: string | null;
+  is_syncing: boolean;
+  exploitation_breakdown: SsvcExploitationStat[];
 }
 
 // Auth types

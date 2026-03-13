@@ -144,6 +144,46 @@ export default function CveDetailModal({ cveId, onClose }: Props) {
               {/* KEV banner */}
               {detail.kev && <KevBanner kev={detail.kev} />}
 
+              {/* SSVC section */}
+              {detail.ssvc && (
+                <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    CISA SSVC
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {detail.ssvc.exploitation && (
+                      <span className={`text-xs font-semibold px-2 py-1 rounded border ${
+                        detail.ssvc.exploitation === "active"
+                          ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800"
+                          : detail.ssvc.exploitation === "poc"
+                          ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600"
+                      }`}>
+                        Exploitation: {detail.ssvc.exploitation}
+                      </span>
+                    )}
+                    {detail.ssvc.automatable && (
+                      <span className={`text-xs font-semibold px-2 py-1 rounded border ${
+                        detail.ssvc.automatable === "yes"
+                          ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800"
+                          : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
+                      }`}>
+                        Automatable: {detail.ssvc.automatable}
+                      </span>
+                    )}
+                    {detail.ssvc.technical_impact && (
+                      <span className={`text-xs font-semibold px-2 py-1 rounded border ${
+                        detail.ssvc.technical_impact === "total"
+                          ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800"
+                          : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800"
+                      }`}>
+                        Technical Impact: {detail.ssvc.technical_impact}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Description */}
               <div>
                 <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
