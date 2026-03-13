@@ -22,6 +22,7 @@ import { startCveEngine, stopCveEngine } from "./cve/cve-engine";
 import { startFeedScheduler, stopFeedScheduler } from "./cve/feed-scheduler";
 import { requireAuth, requireAdmin } from "./middleware/auth";
 import { generalLimiter, authLimiter } from "./middleware/rateLimits";
+import { auditLog } from "./middleware/auditLog";
 import { usersRouter } from "./api/users";
 import { seedAdminUser } from "./auth/seed";
 import { ContentDiff } from "./types";
@@ -39,6 +40,9 @@ const ALLOWED_ORIGIN = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
 app.use(cors({ origin: ALLOWED_ORIGIN, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Audit logging — fires on response finish for every /api request
+app.use("/api", auditLog);
 
 // Rate limiting
 app.use("/api", generalLimiter);
