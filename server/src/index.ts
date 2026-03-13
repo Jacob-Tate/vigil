@@ -10,8 +10,14 @@ import { checksRouter } from "./api/checks";
 import { diffsRouter } from "./api/diffs";
 import { sslTargetsRouter } from "./api/ssl-targets";
 import { sslChecksRouter } from "./api/ssl-checks";
+import { nvdSyncRouter } from "./api/nvd-sync";
+import { cveTargetsRouter } from "./api/cve-targets";
+import { cveFindingsRouter } from "./api/cve-findings";
+import { nvdBrowseRouter } from "./api/nvd-browse";
 import { startEngine, stopEngine } from "./monitor/engine";
 import { startSslEngine, stopSslEngine } from "./monitor/ssl-engine";
+import { startCveEngine, stopCveEngine } from "./cve/cve-engine";
+import { startFeedScheduler, stopFeedScheduler } from "./cve/feed-scheduler";
 import { ContentDiff } from "./types";
 
 dotenv.config();
@@ -31,6 +37,10 @@ app.use("/api/checks", checksRouter);
 app.use("/api/diffs", diffsRouter);
 app.use("/api/ssl/targets", sslTargetsRouter);
 app.use("/api/ssl/checks", sslChecksRouter);
+app.use("/api/nvd", nvdSyncRouter);
+app.use("/api/nvd/browse", nvdBrowseRouter);
+app.use("/api/cve/targets", cveTargetsRouter);
+app.use("/api/cve/findings", cveFindingsRouter);
 
 // Health check
 app.get("/api/health", (_req, res) => {
@@ -79,6 +89,8 @@ const server = app.listen(PORT, () => {
   // Start the monitor engines
   startEngine();
   void startSslEngine();
+  startCveEngine();
+  startFeedScheduler();
 });
 
 // Graceful shutdown
@@ -86,11 +98,15 @@ process.on("SIGINT", () => {
   console.log("\n[server] Shutting down...");
   stopEngine();
   stopSslEngine();
+  stopCveEngine();
+  stopFeedScheduler();
   server.close(() => process.exit(0));
 });
 
 process.on("SIGTERM", () => {
   stopEngine();
   stopSslEngine();
+  stopCveEngine();
+  stopFeedScheduler();
   server.close(() => process.exit(0));
 });

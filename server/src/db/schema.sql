@@ -88,3 +88,70 @@ CREATE TABLE IF NOT EXISTS ssl_checks (
 
 CREATE INDEX IF NOT EXISTS idx_ssl_checks_target ON ssl_checks(target_id);
 CREATE INDEX IF NOT EXISTS idx_ssl_checks_at     ON ssl_checks(checked_at DESC);
+
+-- CVE Monitor: local NVD mirror
+CREATE TABLE IF NOT EXISTS nvd_cves (
+    cve_id           TEXT PRIMARY KEY,
+    published_at     TEXT,
+    last_modified_at TEXT,
+    cvss_score       REAL,
+    cvss_severity    TEXT,   -- CRITICAL | HIGH | MEDIUM | LOW | NONE
+    description      TEXT,
+    nvd_url          TEXT,
+    references_json  TEXT    -- JSON array of {url, source, tags[]}
+);
+
+-- CPE applicability: one row per CPE string per CVE
+CREATE TABLE IF NOT EXISTS nvd_cve_cpes (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    cve_id                  TEXT NOT NULL REFERENCES nvd_cves(cve_id) ON DELETE CASCADE,
+    cpe_string              TEXT NOT NULL,
+    version_start_including TEXT,
+    version_start_excluding TEXT,
+    version_end_including   TEXT,
+    version_end_excluding   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_nvd_cpe_cve_id    ON nvd_cve_cpes(cve_id);
+CREATE INDEX IF NOT EXISTS idx_nvd_cpe_string    ON nvd_cve_cpes(cpe_string);
+
+-- Feed import state: one row per named feed
+CREATE TABLE IF NOT EXISTS nvd_feed_state (
+    feed_name          TEXT PRIMARY KEY,  -- "modified", "recent", "2024", etc.
+    last_modified_date TEXT,              -- from META file
+    sha256             TEXT,              -- from META file
+    total_cves         INTEGER,
+    imported_at        TEXT
+);
+
+-- CVE monitoring targets (standalone, like SSL targets)
+CREATE TABLE IF NOT EXISTS cve_targets (
+    id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                   TEXT NOT NULL,
+    vendor                 TEXT,      -- CPE vendor segment; defaults to product if omitted
+    product                TEXT NOT NULL,
+    version                TEXT,      -- CPE version; NULL means match any version
+    min_alert_cvss_score   REAL NOT NULL DEFAULT 7.0,
+    check_interval_seconds INTEGER NOT NULL DEFAULT 86400,
+    active                 INTEGER NOT NULL DEFAULT 1,
+    created_at             TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    last_checked_at        TEXT,
+    last_alerted_at        TEXT
+);
+
+-- CVEs found/matched for each target
+CREATE TABLE IF NOT EXISTS cve_findings (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id        INTEGER NOT NULL REFERENCES cve_targets(id) ON DELETE CASCADE,
+    cve_id           TEXT NOT NULL,
+    published_at     TEXT,
+    last_modified_at TEXT,
+    cvss_score       REAL,
+    cvss_severity    TEXT,
+    description      TEXT,
+    nvd_url          TEXT,
+    found_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    alerted          INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(target_id, cve_id)
+);
+CREATE INDEX IF NOT EXISTS idx_cve_findings_target_id ON cve_findings(target_id);
+CREATE INDEX IF NOT EXISTS idx_cve_findings_found_at  ON cve_findings(found_at DESC);

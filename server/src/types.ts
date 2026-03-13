@@ -58,7 +58,8 @@ export type AlertType =
   | "SSL_EXPIRING"
   | "SSL_EXPIRED"
   | "SSL_ERROR"
-  | "SSL_CHANGED";
+  | "SSL_CHANGED"
+  | "CVE_NEW";
 
 export type SslAlertType = "SSL_EXPIRING" | "SSL_EXPIRED" | "SSL_ERROR" | "SSL_CHANGED";
 
@@ -76,6 +77,11 @@ export interface AlertPayload {
   sslDaysRemaining?: number | null;
   sslFingerprint?: string | null;
   sslSubject?: string | null;
+  cveId?: string;
+  cvssScore?: number | null;
+  cvssSeverity?: string | null;
+  // Present when multiple CVEs are batched into one digest alert
+  cveDigest?: Array<{ cveId: string; cvssScore: number | null; cvssSeverity: string | null }>;
 }
 
 // SSL Monitor types
@@ -150,4 +156,86 @@ export interface SslTargetWithStatus extends SslTarget {
 
 export interface ServerWithStatus extends Server {
   last_check: Check | null;
+}
+
+// CVE Monitor types
+
+export interface CveTarget {
+  id: number;
+  name: string;
+  vendor: string | null;
+  product: string;
+  version: string | null;
+  min_alert_cvss_score: number;
+  check_interval_seconds: number;
+  active: number; // SQLite boolean: 1 | 0
+  created_at: string;
+  last_checked_at: string | null;
+  last_alerted_at: string | null;
+}
+
+export interface CveFinding {
+  id: number;
+  target_id: number;
+  cve_id: string;
+  published_at: string | null;
+  last_modified_at: string | null;
+  cvss_score: number | null;
+  cvss_severity: string | null;
+  description: string | null;
+  nvd_url: string | null;
+  found_at: string;
+  alerted: number; // SQLite boolean: 1 | 0
+}
+
+export interface CveTargetWithStats extends CveTarget {
+  findings_count: number;
+  latest_finding: CveFinding | null;
+  top_cvss_score: number | null;
+  top_cvss_severity: string | null;
+}
+
+export interface NvdFeedState {
+  feed_name: string;
+  last_modified_date: string | null;
+  sha256: string | null;
+  total_cves: number | null;
+  imported_at: string | null;
+}
+
+export interface NvdSyncStatus {
+  isImporting: boolean;
+  currentFeed: string | null;
+  feedProgress: number; // 0–100
+  feedsDone: number;
+  feedsTotal: number;
+  error: string | null;
+  startedAt: string | null;
+  feedStates: NvdFeedState[];
+}
+
+export interface NvdCveRef {
+  url: string;
+  source?: string;
+  tags?: string[];
+}
+
+export interface NvdCpeEntry {
+  cpe_string: string;
+  version_start_including: string | null;
+  version_start_excluding: string | null;
+  version_end_including: string | null;
+  version_end_excluding: string | null;
+}
+
+export interface NvdCveDetail {
+  cve_id: string;
+  published_at: string | null;
+  last_modified_at: string | null;
+  cvss_score: number | null;
+  cvss_severity: string | null;
+  description: string | null;
+  nvd_url: string | null;
+  cpe_entries: NvdCpeEntry[];
+  references: NvdCveRef[];
 }

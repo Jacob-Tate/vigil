@@ -176,3 +176,115 @@ export interface SslTargetFormData {
   expiry_threshold_hours: number;
   active: boolean;
 }
+
+// CVE Monitor types
+
+export interface CveTarget {
+  id: number;
+  name: string;
+  vendor: string | null;
+  product: string;
+  version: string | null;
+  min_alert_cvss_score: number;
+  check_interval_seconds: number;
+  active: number;
+  created_at: string;
+  last_checked_at: string | null;
+  last_alerted_at: string | null;
+}
+
+export interface CveFinding {
+  id: number;
+  target_id: number;
+  cve_id: string;
+  published_at: string | null;
+  last_modified_at: string | null;
+  cvss_score: number | null;
+  cvss_severity: string | null;
+  description: string | null;
+  nvd_url: string | null;
+  found_at: string;
+  alerted: number;
+}
+
+export interface CveTargetWithStats extends CveTarget {
+  findings_count: number;
+  latest_finding: CveFinding | null;
+  top_cvss_score: number | null;
+  top_cvss_severity: string | null;
+}
+
+export interface CveTargetFormData {
+  name: string;
+  vendor: string | null;
+  product: string;
+  version: string | null;
+  min_alert_cvss_score: number;
+  check_interval_seconds: number;
+  active: boolean;
+}
+
+export interface NvdFeedState {
+  feed_name: string;
+  last_modified_date: string | null;
+  sha256: string | null;
+  total_cves: number | null;
+  imported_at: string | null;
+}
+
+export interface NvdSyncStatus {
+  isImporting: boolean;
+  currentFeed: string | null;
+  feedProgress: number;
+  feedsDone: number;
+  feedsTotal: number;
+  error: string | null;
+  startedAt: string | null;
+  feedStates: NvdFeedState[];
+}
+
+export interface NvdCveRef {
+  url: string;
+  source?: string;
+  tags?: string[];
+}
+
+export interface NvdCpeEntry {
+  cpe_string: string;
+  version_start_including: string | null;
+  version_start_excluding: string | null;
+  version_end_including: string | null;
+  version_end_excluding: string | null;
+}
+
+export interface NvdCveDetail {
+  cve_id: string;
+  published_at: string | null;
+  last_modified_at: string | null;
+  cvss_score: number | null;
+  cvss_severity: string | null;
+  description: string | null;
+  nvd_url: string | null;
+  cpe_entries: NvdCpeEntry[];
+  references?: NvdCveRef[];
+}
+
+export interface PaginatedCveFindings {
+  data: CveFinding[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface PaginatedNvdCves {
+  data: Omit<NvdCveDetail, "cpe_entries">[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}

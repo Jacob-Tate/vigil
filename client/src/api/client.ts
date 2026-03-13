@@ -12,6 +12,14 @@ import {
   SslCheckStats,
   PaginatedSslChecks,
   SslTargetFormData,
+  CveTarget,
+  CveTargetWithStats,
+  CveTargetFormData,
+  CveFinding,
+  PaginatedCveFindings,
+  NvdSyncStatus,
+  NvdCveDetail,
+  PaginatedNvdCves,
 } from "../types";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -99,3 +107,63 @@ export const getSslCheckStats = (targetId: number) =>
   request<SslCheckStats>(`/ssl/checks/stats/${targetId}`);
 export const getSslCheck = (id: number) =>
   request<SslCheck>(`/ssl/checks/${id}`);
+
+// NVD Sync
+export const getNvdStatus = () =>
+  request<NvdSyncStatus>("/nvd/status");
+export const triggerNvdSync = () =>
+  request<{ ok: boolean; message: string }>("/nvd/sync", { method: "POST" });
+export const triggerNvdFeedSync = (feedName: string) =>
+  request<{ ok: boolean; message: string }>(`/nvd/sync/${feedName}`, { method: "POST" });
+
+// NVD Browse
+export const searchNvdCves = (params: {
+  q?: string;
+  severity?: string;
+  minScore?: number;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}) => {
+  const qs = new URLSearchParams();
+  if (params.q) qs.set("q", params.q);
+  if (params.severity) qs.set("severity", params.severity);
+  if (params.minScore !== undefined) qs.set("minScore", String(params.minScore));
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  qs.set("page", String(params.page ?? 1));
+  qs.set("limit", String(params.limit ?? 50));
+  return request<PaginatedNvdCves>(`/nvd/browse/search?${qs.toString()}`);
+};
+export const getNvdCve = (cveId: string) =>
+  request<NvdCveDetail>(`/nvd/browse/cve/${encodeURIComponent(cveId)}`);
+
+// CVE Targets
+export const getCveTargets = () =>
+  request<CveTargetWithStats[]>("/cve/targets");
+export const getCveTarget = (id: number) =>
+  request<CveTargetWithStats>(`/cve/targets/${id}`);
+export const createCveTarget = (data: CveTargetFormData) =>
+  request<CveTargetWithStats>("/cve/targets", { method: "POST", body: JSON.stringify(data) });
+export const updateCveTarget = (id: number, data: Partial<CveTargetFormData>) =>
+  request<CveTargetWithStats>(`/cve/targets/${id}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteCveTarget = (id: number) =>
+  request<void>(`/cve/targets/${id}`, { method: "DELETE" });
+export const triggerCveCheck = (id: number) =>
+  request<{ ok: boolean; target: CveTarget }>(`/cve/targets/${id}/check`, { method: "POST" });
+
+// CVE Findings
+export const getCveFindings = (
+  targetId: number,
+  page = 1,
+  limit = 50,
+  sortBy = "cvss_score",
+  sortDir: "asc" | "desc" = "desc"
+) =>
+  request<PaginatedCveFindings>(
+    `/cve/findings?targetId=${targetId}&page=${page}&limit=${limit}&sortBy=${sortBy}&sortDir=${sortDir}`
+  );
+
+// Suppress unused import warnings until used
+export type { CveFinding };

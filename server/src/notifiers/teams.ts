@@ -7,6 +7,11 @@ const THEME_COLORS: Record<string, string> = {
   DEGRADED: "FF9900",
   CONTENT_CHANGED: "5865F2",
   RECOVERED: "2ECC71",
+  SSL_EXPIRING: "FF9900",
+  SSL_EXPIRED: "FF4444",
+  SSL_ERROR: "FF4444",
+  SSL_CHANGED: "9B59B6",
+  CVE_NEW: "E74C3C",
 };
 
 const teams: INotifier = {
@@ -24,16 +29,27 @@ const teams: INotifier = {
     const webhookUrl = config.webhookUrl as string;
     if (!webhookUrl) throw new Error("Teams webhookUrl is required");
 
-    const facts = [
-      { name: "URL", value: payload.url },
+    const facts: { name: string; value: string }[] = [
       { name: "Alert Type", value: payload.alertType },
     ];
 
-    if (payload.statusCode !== null) {
-      facts.push({ name: "HTTP Status", value: String(payload.statusCode) });
-    }
-    if (payload.responseTimeMs !== null) {
-      facts.push({ name: "Response Time", value: `${payload.responseTimeMs}ms` });
+    if (payload.alertType === "CVE_NEW") {
+      if (payload.cveId) facts.push({ name: "CVE ID", value: payload.cveId });
+      if (payload.cvssScore !== null && payload.cvssScore !== undefined) {
+        facts.push({
+          name: "CVSS Score",
+          value: `${payload.cvssScore.toFixed(1)} ${payload.cvssSeverity ?? ""}`.trim(),
+        });
+      }
+      facts.push({ name: "NVD Link", value: payload.url });
+    } else {
+      facts.push({ name: "URL", value: payload.url });
+      if (payload.statusCode !== null) {
+        facts.push({ name: "HTTP Status", value: String(payload.statusCode) });
+      }
+      if (payload.responseTimeMs !== null) {
+        facts.push({ name: "Response Time", value: `${payload.responseTimeMs}ms` });
+      }
     }
 
     const sections: unknown[] = [

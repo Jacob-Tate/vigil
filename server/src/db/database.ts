@@ -38,6 +38,14 @@ db.exec(schema);
 
 // Migrations: add columns that may not exist in older databases
 try { db.exec("ALTER TABLE servers ADD COLUMN ignore_patterns TEXT"); } catch { /* column already exists */ }
+try { db.exec("ALTER TABLE nvd_cve_cpes ADD COLUMN version_start_including TEXT"); } catch { /* exists */ }
+try { db.exec("ALTER TABLE nvd_cve_cpes ADD COLUMN version_start_excluding TEXT"); } catch { /* exists */ }
+try { db.exec("ALTER TABLE nvd_cve_cpes ADD COLUMN version_end_including TEXT"); } catch { /* exists */ }
+try { db.exec("ALTER TABLE nvd_cve_cpes ADD COLUMN version_end_excluding TEXT"); } catch { /* exists */ }
+try { db.exec("ALTER TABLE nvd_cves ADD COLUMN references_json TEXT"); } catch { /* exists */ }
+// Rename min_cvss_score → min_alert_cvss_score: add new column, copy data, leave old for compat
+try { db.exec("ALTER TABLE cve_targets ADD COLUMN min_alert_cvss_score REAL NOT NULL DEFAULT 7.0"); } catch { /* exists */ }
+try { db.exec("UPDATE cve_targets SET min_alert_cvss_score = min_cvss_score WHERE min_cvss_score IS NOT NULL"); } catch { /* old column may not exist */ }
 
 // Type-safe query helpers that work around node:sqlite's untyped return values
 export function dbGet<T>(sql: string, ...params: unknown[]): T | undefined {

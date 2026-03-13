@@ -18,6 +18,7 @@ export default function ServerForm({ server, onSave, onClose }: Props) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [patternsRaw, setPatternsRaw] = useState("");
 
   useEffect(() => {
     if (server) {
@@ -33,6 +34,7 @@ export default function ServerForm({ server, onSave, onClose }: Props) {
         active: server.active === 1,
         ignore_patterns: patterns,
       });
+      setPatternsRaw(patterns.join("\n"));
     }
   }, [server]);
 
@@ -136,8 +138,9 @@ export default function ServerForm({ server, onSave, onClose }: Props) {
             <div className="mt-2">
               <textarea
                 rows={4}
-                value={form.ignore_patterns.join("\n")}
-                onChange={(e) =>
+                value={patternsRaw}
+                onChange={(e) => setPatternsRaw(e.target.value)}
+                onBlur={(e) =>
                   setForm((f) => ({
                     ...f,
                     ignore_patterns: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean),

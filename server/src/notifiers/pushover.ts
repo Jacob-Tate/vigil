@@ -9,6 +9,7 @@ const PRIORITIES: Record<string, number> = {
   DEGRADED: 0,
   CONTENT_CHANGED: 0,
   RECOVERED: -1,
+  CVE_NEW: 0,
 };
 
 const pushover: INotifier = {
