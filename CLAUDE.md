@@ -2,14 +2,14 @@
 
 ## Project Overview
 
-Full-stack TypeScript server monitoring app. Express backend + React/Tailwind frontend. See README.md for full feature list.
+Full-stack TypeScript server monitoring platform ("Vigil"). Express backend + React/Tailwind frontend. See README.md for full feature list.
 
 ## Structure
 
 ```
-server/src/         Express API + monitor engine (TypeScript, CommonJS)
+server/src/         Express API + monitor engines (TypeScript, CommonJS)
 client/src/         React + Vite + Tailwind (TypeScript, ESM)
-server/data/        GITIGNORED — SQLite DB, HTML snapshots, diff files
+server/data/        GITIGNORED — SQLite DB, HTML snapshots, diff files, NVD mirror
 ```
 
 ## TypeScript Rules
@@ -38,12 +38,34 @@ npm run lint        # must pass with 0 errors
 
 | File | Purpose |
 |------|---------|
-| `server/src/types.ts` | All shared backend types (Server, CheckResult, AlertPayload, etc.) |
+| `server/src/types.ts` | All shared backend types (Server, CheckResult, AlertPayload, auth types, etc.) |
 | `server/src/db/database.ts` | SQLite singleton; also ensures `data/snapshots/` and `data/diffs/` exist |
-| `server/src/monitor/engine.ts` | Scheduler — call `scheduleServer`/`unscheduleServer`/`rescheduleServer` from API routes |
-| `server/src/notifiers/types.ts` | `INotifier` interface — implement this to add a new channel |
+| `server/src/middleware/auth.ts` | `requireAuth` and `requireAdmin` Express middleware; augments `req.user` |
+| `server/src/auth/seed.ts` | First-boot admin user seeding from env vars (idempotent) |
+| `server/src/api/auth.ts` | Login / logout / me routes (no auth required) |
+| `server/src/api/users.ts` | User CRUD (admin-only) |
+| `server/src/monitor/engine.ts` | HTTP check scheduler — call `scheduleServer`/`unscheduleServer`/`rescheduleServer` from API routes |
+| `server/src/notifiers/types.ts` | `INotifier` interface — implement this to add a new notification channel |
 | `server/src/notifiers/index.ts` | `NOTIFIER_MAP` registry + `sendAlert()` dispatch |
-| `client/src/api/client.ts` | All frontend API calls go through this typed fetch wrapper |
+| `client/src/api/client.ts` | All frontend API calls — typed fetch wrapper with `credentials: "include"` and 401 redirect |
+| `client/src/contexts/AuthContext.tsx` | React context providing `user`, `isAdmin`, `loading`, `login`, `logout` |
+| `client/src/hooks/useAuth.ts` | `useAuth()` hook — import from here, not from AuthContext directly |
+| `client/src/components/ProtectedRoute.tsx` | Route guard — redirects to `/login` if unauthenticated; `requireAdmin` prop for admin-only routes |
+
+## Authentication
+
+All API routes require a valid session. The only exceptions are `/api/auth/login`, `/api/auth/logout`, and `/api/health`.
+
+- `requireAuth` — validates the httpOnly JWT cookie, attaches `req.user`; registered at the router level in `index.ts`
+- `requireAdmin` — calls `requireAuth` then checks `role === "admin"`; applied inline on every mutating route (POST/PUT/DELETE/trigger) inside each router file
+
+When adding a new router:
+1. Register it in `index.ts` with `requireAuth` (or `requireAdmin` if fully admin-only)
+2. Add `requireAdmin` as the first argument on any write routes inside the router file
+
+When adding write actions to the frontend:
+- Gate buttons/forms with `const { isAdmin } = useAuth()` and `{isAdmin && ...}`
+- Pass handlers as `undefined` to card components for non-admins (they conditionally render based on prop presence)
 
 ## Monitor Engine Flow
 
