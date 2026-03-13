@@ -45,6 +45,7 @@ Create `server/.env` from `server/.env.example`:
 |----------|---------|-------------|
 | `PORT` | `3001` | Express server port |
 | `JWT_SECRET` | — | **Required in production** — secret used to sign JWT session tokens |
+| `NOTIFICATIONS_ENCRYPTION_KEY` | — | **Strongly recommended** — AES-256-GCM key for encrypting notification credentials (webhook URLs, API keys) at rest. Must be a securely generated random value: `openssl rand -hex 32`. Without it, credentials are stored in plaintext. |
 | `ADMIN_USERNAME` | — | First-boot admin username (seeded once if no users exist) |
 | `ADMIN_PASSWORD` | — | First-boot admin password |
 | `SESSION_DURATION_HOURS` | `24` | Cookie/token lifetime in hours |
