@@ -42,13 +42,36 @@ export function isScreenshotStale(serverId: number): boolean {
   return Date.now() - stats.mtimeMs > SCREENSHOT_MAX_AGE_MS;
 }
 
+// Only http/https are safe to navigate Chromium to; other schemes
+// (file://, javascript:, chrome://, data:, etc.) risk local file
+// disclosure or renderer exploitation.
+function assertSafeUrl(url: string): void {
+  const parsed = new URL(url);
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`Unsafe URL scheme for screenshot: ${parsed.protocol}`);
+  }
+}
+
 export async function captureScreenshot(serverId: number, url: string): Promise<void> {
+  assertSafeUrl(url);
+
   const executablePath = findBrowser();
 
   const browser = await puppeteer.launch({
     executablePath,
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-extensions",
+      "--disable-background-networking",
+      "--disable-sync",
+      "--disable-default-apps",
+      "--no-first-run",
+      "--mute-audio",
+      "--disable-gpu",
+    ],
   });
 
   try {
