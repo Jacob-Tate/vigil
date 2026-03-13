@@ -66,7 +66,7 @@ export default function CveTargetForm({ target, onSave, onClose }: Props) {
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g. Moodle on DigiPen"
+              placeholder="e.g. Moodle on example.com"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
