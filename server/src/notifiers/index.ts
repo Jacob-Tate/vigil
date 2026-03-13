@@ -4,6 +4,7 @@ import { INotifier } from "./types";
 import { discord } from "./discord";
 import { pushover } from "./pushover";
 import { teams } from "./teams";
+import { decryptConfig } from "../lib/configCrypto";
 
 export const NOTIFIER_MAP: Record<string, INotifier> = {
   discord,
@@ -26,7 +27,7 @@ export async function sendAlert(
         console.warn(`[notifiers] Unknown notifier type: ${ch.type}`);
         return;
       }
-      const config = JSON.parse(ch.config_json) as Record<string, unknown>;
+      const config = JSON.parse(decryptConfig(ch.config_json)) as Record<string, unknown>;
       await notifier.send(config, payload);
     })
   );

@@ -4,28 +4,30 @@ import { dbGet, dbAll, dbRun } from "../db/database";
 import { NotificationChannel } from "../types";
 import { sendAlert, NOTIFIER_MAP } from "../notifiers";
 import { requireAdmin } from "../middleware/auth";
+import { encryptConfig, decryptConfig } from "../lib/configCrypto";
 
 const router = Router();
+
+function redactChannel(ch: NotificationChannel): Record<string, unknown> {
+  const config = JSON.parse(decryptConfig(ch.config_json)) as Record<string, unknown>;
+  const notifier = NOTIFIER_MAP[ch.type];
+  const redacted: Record<string, unknown> = {};
+  if (notifier) {
+    for (const [key, schema] of Object.entries(notifier.configSchema)) {
+      if (schema.type === "password") {
+        redacted[key] = config[key] ? "••••••••" : "";
+      } else {
+        redacted[key] = config[key] ?? "";
+      }
+    }
+  }
+  return { ...ch, config: redacted, config_json: undefined };
+}
 
 // GET /api/notifications
 router.get("/", (_req: Request, res: Response) => {
   const channels = dbAll<NotificationChannel>("SELECT * FROM notification_channels ORDER BY id ASC");
-  const safe = channels.map((ch) => {
-    const config = JSON.parse(ch.config_json) as Record<string, unknown>;
-    const notifier = NOTIFIER_MAP[ch.type];
-    const redacted: Record<string, unknown> = {};
-    if (notifier) {
-      for (const [key, schema] of Object.entries(notifier.configSchema)) {
-        if (schema.type === "password") {
-          redacted[key] = config[key] ? "••••••••" : "";
-        } else {
-          redacted[key] = config[key] ?? "";
-        }
-      }
-    }
-    return { ...ch, config: redacted, config_json: undefined };
-  });
-  res.json(safe);
+  res.json(channels.map(redactChannel));
 });
 
 // GET /api/notifications/types
@@ -67,14 +69,14 @@ router.post(
 
     const info = dbRun(
       "INSERT INTO notification_channels (type, label, config_json, active) VALUES (?, ?, ?, ?)",
-      type, label ?? null, JSON.stringify(config), active ? 1 : 0
+      type, label ?? null, encryptConfig(JSON.stringify(config)), active ? 1 : 0
     );
 
     const channel = dbGet<NotificationChannel>(
       "SELECT * FROM notification_channels WHERE id = ?",
       info.lastInsertRowid
     );
-    res.status(201).json(channel);
+    res.status(201).json(channel ? redactChannel(channel) : null);
   }
 );
 
@@ -108,7 +110,7 @@ router.put(
       active: boolean;
     }>;
 
-    const existingConfig = JSON.parse(channel.config_json) as Record<string, unknown>;
+    const existingConfig = JSON.parse(decryptConfig(channel.config_json)) as Record<string, unknown>;
     const mergedConfig = bodyData.config
       ? { ...existingConfig, ...bodyData.config }
       : existingConfig;
@@ -116,7 +118,7 @@ router.put(
     dbRun(
       "UPDATE notification_channels SET label = ?, config_json = ?, active = ? WHERE id = ?",
       bodyData.label ?? channel.label,
-      JSON.stringify(mergedConfig),
+      encryptConfig(JSON.stringify(mergedConfig)),
       bodyData.active !== undefined ? (bodyData.active ? 1 : 0) : channel.active,
       channel.id
     );
@@ -125,7 +127,7 @@ router.put(
       "SELECT * FROM notification_channels WHERE id = ?",
       channel.id
     );
-    res.json(updated);
+    res.json(updated ? redactChannel(updated) : null);
   }
 );
 
