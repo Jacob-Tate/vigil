@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- context + provider must coexist in one file */
 import { createContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { AuthUser } from "../types";
 

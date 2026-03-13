@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { parseApiDate } from "../utils/date";
@@ -22,7 +22,7 @@ export default function ServerDetail() {
   const { checks, pagination, loading: checksLoading, refresh: refreshChecks } = useChecks(serverId, page);
   const { stats } = useCheckStats(serverId);
 
-  const loadServer = async () => {
+  const loadServer = useCallback(async () => {
     try {
       const s = await getServer(serverId);
       setServer(s);
@@ -31,11 +31,11 @@ export default function ServerDetail() {
     } finally {
       setServerLoading(false);
     }
-  };
+  }, [serverId]);
 
   useEffect(() => {
     void loadServer();
-  }, [serverId]);
+  }, [loadServer]);
 
   const handleCheck = async () => {
     if (!server) return;
