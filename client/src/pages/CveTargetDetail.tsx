@@ -207,6 +207,16 @@ export default function CveTargetDetail() {
                           PoC
                         </span>
                       )}
+                      {finding.cvelist_state === "REJECTED" && (
+                        <span className="text-xs font-bold bg-gray-500 text-white px-1.5 py-0.5 rounded leading-none line-through">
+                          REJECTED
+                        </span>
+                      )}
+                      {finding.cvss_score === null && finding.cvelist_state === "PUBLISHED" && (
+                        <span className="text-xs font-bold bg-yellow-500 text-white px-1.5 py-0.5 rounded leading-none">
+                          NVD PENDING
+                        </span>
+                      )}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -222,7 +232,7 @@ export default function CveTargetDetail() {
                   </td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-xs">
                     <p className="truncate">
-                      {finding.description ?? "—"}
+                      {finding.description ?? finding.cvelist_cna_description ?? "—"}
                     </p>
                   </td>
                   <td className="px-4 py-3 text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap">

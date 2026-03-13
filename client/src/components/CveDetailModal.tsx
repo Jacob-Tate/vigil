@@ -92,7 +92,7 @@ export default function CveDetailModal({ cveId, onClose }: Props) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {detail?.nvd_url && (
+            {detail?.nvd_url ? (
               <a
                 href={detail.nvd_url}
                 target="_blank"
@@ -100,6 +100,15 @@ export default function CveDetailModal({ cveId, onClose }: Props) {
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
               >
                 NVD ↗
+              </a>
+            ) : (
+              <a
+                href={`https://www.cve.org/CVERecord?id=${cveId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                CVE.org ↗
               </a>
             )}
             <button
@@ -184,13 +193,45 @@ export default function CveDetailModal({ cveId, onClose }: Props) {
                 </div>
               )}
 
+              {/* cvelistV5 state */}
+              {detail.cvelist && (
+                <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      CVE Program (cvelistV5)
+                    </p>
+                    {detail.cvelist.state === "REJECTED" ? (
+                      <span className="text-xs font-bold bg-gray-500 text-white px-1.5 py-0.5 rounded leading-none line-through">
+                        REJECTED
+                      </span>
+                    ) : detail.cvelist.state === "PUBLISHED" ? (
+                      <span className="text-xs font-bold bg-green-600 text-white px-1.5 py-0.5 rounded leading-none">
+                        PUBLISHED
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold bg-yellow-500 text-white px-1.5 py-0.5 rounded leading-none">
+                        {detail.cvelist.state}
+                      </span>
+                    )}
+                  </div>
+                  {detail.description === null && detail.cvelist.cna_description && (
+                    <div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">CNA Description — NVD pending</p>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                        {detail.cvelist.cna_description}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Description */}
               <div>
                 <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
                   Description
                 </h3>
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {detail.description ?? "No description available."}
+                  {detail.description ?? detail.cvelist?.cna_description ?? "No description available."}
                 </p>
               </div>
 

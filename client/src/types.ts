@@ -210,6 +210,8 @@ export interface CveFinding {
   ssvc_exploitation: string | null;
   ssvc_automatable: string | null;
   ssvc_technical_impact: string | null;
+  cvelist_state: string | null;
+  cvelist_cna_description: string | null;
 }
 
 export interface CveTargetWithStats extends CveTarget {
@@ -285,6 +287,13 @@ export interface NvdCveDetail {
     automatable: string | null;
     technical_impact: string | null;
   } | null;
+  cvelist?: {
+    state: string;
+    cna_description: string | null;
+    cna_title: string | null;
+    date_published: string | null;
+    date_updated: string | null;
+  } | null;
 }
 
 export interface KevYearStat {
@@ -312,6 +321,14 @@ export interface VulnrichmentSyncState {
   exploitation_breakdown: SsvcExploitationStat[];
 }
 
+export interface CvelistSyncState {
+  total: number;
+  rejected_count: number;
+  last_synced_at: string | null;
+  is_syncing: boolean;
+  last_repo_version: string | null;
+}
+
 export interface PaginatedCveFindings {
   data: CveFinding[];
   pagination: {
@@ -322,9 +339,10 @@ export interface PaginatedCveFindings {
   };
 }
 
-export interface NvdCveBrowseRow extends Omit<NvdCveDetail, "cpe_entries" | "references" | "kev" | "ssvc"> {
+export interface NvdCveBrowseRow extends Omit<NvdCveDetail, "cpe_entries" | "references" | "kev" | "ssvc" | "cvelist"> {
   is_kev: number; // 1 | 0
   ssvc_exploitation: string | null;
+  cvelist_state: string | null;
 }
 
 export interface PaginatedNvdCves {

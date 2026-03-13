@@ -12,6 +12,7 @@ import {
 import NvdSyncPanel from "../components/NvdSyncPanel";
 import KevSyncPanel from "../components/KevSyncPanel";
 import VulnrichmentSyncPanel from "../components/VulnrichmentSyncPanel";
+import CvelistSyncPanel from "../components/CvelistSyncPanel";
 import CveTargetCard from "../components/CveTargetCard";
 import CveTargetForm from "../components/CveTargetForm";
 import { useAuth } from "../hooks/useAuth";
@@ -116,6 +117,7 @@ export default function CveMonitor() {
       <NvdSyncPanel />
       <KevSyncPanel />
       <VulnrichmentSyncPanel />
+      <CvelistSyncPanel />
 
       {/* Stats bar */}
       {targets.length > 0 && (

@@ -246,6 +246,77 @@ async function checkEnrichmentUpdates(): Promise<void> {
   }
 }
 
+interface RejectionFinding {
+  id: number;
+  target_id: number;
+  cve_id: string;
+  cvss_score: number | null;
+  cvss_severity: string | null;
+  description: string | null;
+  nvd_url: string | null;
+  target_name: string;
+}
+
+// Check C: CVE rejected by MITRE — alert for any alerted finding where cvelist says REJECTED
+async function checkRejections(): Promise<void> {
+  const findings = dbAll<RejectionFinding>(
+    `SELECT f.id, f.target_id, f.cve_id, f.cvss_score, f.cvss_severity,
+            f.description, f.nvd_url,
+            t.name AS target_name
+     FROM cve_findings f
+     JOIN cve_targets t ON f.target_id = t.id AND t.active = 1
+     JOIN cvelist_cves cl ON f.cve_id = cl.cve_id
+     WHERE cl.state = 'REJECTED'
+       AND f.alerted = 1
+       AND (f.rejection_alert_sent IS NULL OR f.rejection_alert_sent != 1)`
+  );
+
+  if (findings.length === 0) return;
+
+  const byTarget = new Map<number, RejectionFinding[]>();
+  for (const f of findings) {
+    const arr = byTarget.get(f.target_id) ?? [];
+    arr.push(f);
+    byTarget.set(f.target_id, arr);
+  }
+
+  for (const [, group] of byTarget) {
+    const sorted = [...group].sort((a, b) => (b.cvss_score ?? 0) - (a.cvss_score ?? 0));
+    const top = sorted[0]!;
+    const targetName = top.target_name;
+
+    const message =
+      sorted.length === 1
+        ? `CVE rejected by MITRE for ${targetName}: ${top.cve_id} has been officially REJECTED and is no longer valid`
+        : `${sorted.length} CVEs rejected by MITRE for ${targetName}: ${sorted.map((f) => f.cve_id).join(", ")}`;
+
+    const payload: AlertPayload = {
+      serverName: targetName,
+      url: top.nvd_url ?? `https://www.cve.org/CVERecord?id=${top.cve_id}`,
+      alertType: "CVE_REJECTED",
+      statusCode: null,
+      responseTimeMs: null,
+      threshold: null,
+      diffId: null,
+      diffViewUrl: `${BASE_URL}/cve/${top.target_id}`,
+      detectedAt: new Date().toISOString(),
+      message,
+      cveId: top.cve_id,
+      cvssScore: top.cvss_score,
+      cvssSeverity: top.cvss_severity,
+      cveDigest: sorted.length > 1
+        ? sorted.map((f) => ({ cveId: f.cve_id, cvssScore: f.cvss_score, cvssSeverity: f.cvss_severity }))
+        : undefined,
+    };
+
+    await sendAlert(payload);
+
+    for (const f of group) {
+      dbRun("UPDATE cve_findings SET rejection_alert_sent = 1 WHERE id = ?", f.id);
+    }
+  }
+}
+
 export async function checkEnrichmentAlerts(): Promise<void> {
   try {
     await checkExploitationEscalations();
@@ -256,5 +327,10 @@ export async function checkEnrichmentAlerts(): Promise<void> {
     await checkEnrichmentUpdates();
   } catch (err) {
     console.error("[enrichment-alerter] enrichment update check failed:", err);
+  }
+  try {
+    await checkRejections();
+  } catch (err) {
+    console.error("[enrichment-alerter] rejection check failed:", err);
   }
 }

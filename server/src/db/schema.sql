@@ -183,6 +183,29 @@ CREATE TABLE IF NOT EXISTS cisa_ssvc (
 );
 CREATE INDEX IF NOT EXISTS idx_cisa_ssvc_exploitation ON cisa_ssvc(exploitation);
 
+-- cvelistV5 core data: state + CNA description per CVE
+CREATE TABLE IF NOT EXISTS cvelist_cves (
+    cve_id           TEXT PRIMARY KEY,
+    state            TEXT NOT NULL,   -- PUBLISHED | REJECTED
+    cna_description  TEXT,
+    cna_title        TEXT,
+    date_published   TEXT,
+    date_updated     TEXT,
+    synced_at        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cvelist_state ON cvelist_cves(state);
+
+-- cvelistV5 affected products: one row per vendor/product entry per CVE
+CREATE TABLE IF NOT EXISTS cvelist_affected (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    cve_id          TEXT NOT NULL,
+    vendor          TEXT,             -- lowercase
+    product         TEXT NOT NULL,    -- lowercase
+    versions_json   TEXT,             -- JSON array of version range objects
+    default_status  TEXT              -- affected | unaffected | unknown
+);
+CREATE INDEX IF NOT EXISTS idx_cvelist_affected_product ON cvelist_affected(product);
+
 -- Users: admin and viewer roles
 CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,

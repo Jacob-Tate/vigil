@@ -22,6 +22,7 @@ import {
   PaginatedNvdCves,
   KevSyncState,
   VulnrichmentSyncState,
+  CvelistSyncState,
   UserListItem,
   UserFormData,
   UserUpdateData,
@@ -188,6 +189,12 @@ export const getVulnrichmentStatus = () =>
   request<VulnrichmentSyncState>("/vulnrichment/status");
 export const triggerVulnrichmentSync = () =>
   request<{ ok: boolean; message: string }>("/vulnrichment/sync", { method: "POST" });
+
+// CVE Program cvelistV5 Sync
+export const getCvelistStatus = () =>
+  request<CvelistSyncState>("/cvelist/status");
+export const triggerCvelistSync = () =>
+  request<{ ok: boolean; message: string }>("/cvelist/sync", { method: "POST" });
 
 // Users (admin only)
 export const getUsers = () => request<UserListItem[]>("/users");

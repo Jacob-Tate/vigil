@@ -49,6 +49,7 @@ try { db.exec("UPDATE cve_targets SET min_alert_cvss_score = min_cvss_score WHER
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'viewer'"); } catch { /* exists */ }
 try { db.exec("ALTER TABLE cve_findings ADD COLUMN enrichment_fingerprint TEXT"); } catch { /* exists */ }
 try { db.exec("ALTER TABLE cve_findings ADD COLUMN exploitation_alert_sent TEXT"); } catch { /* exists */ }
+try { db.exec("ALTER TABLE cve_findings ADD COLUMN rejection_alert_sent INTEGER DEFAULT 0"); } catch { /* exists */ }
 
 // Type-safe query helpers that work around node:sqlite's untyped return values
 export function dbGet<T>(sql: string, ...params: unknown[]): T | undefined {

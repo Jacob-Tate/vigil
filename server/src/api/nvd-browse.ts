@@ -172,6 +172,17 @@ router.get(
       cveId
     );
 
+    const cvelistRow = dbGet<{
+      state: string;
+      cna_description: string | null;
+      cna_title: string | null;
+      date_published: string | null;
+      date_updated: string | null;
+    }>(
+      "SELECT state, cna_description, cna_title, date_published, date_updated FROM cvelist_cves WHERE cve_id = ?",
+      cveId
+    );
+
     const detail: NvdCveDetail = {
       cve_id: row.cve_id,
       published_at: row.published_at,
@@ -196,6 +207,15 @@ router.get(
             exploitation: ssvcRow.exploitation,
             automatable: ssvcRow.automatable,
             technical_impact: ssvcRow.technical_impact,
+          }
+        : null,
+      cvelist: cvelistRow
+        ? {
+            state: cvelistRow.state,
+            cna_description: cvelistRow.cna_description,
+            cna_title: cvelistRow.cna_title,
+            date_published: cvelistRow.date_published,
+            date_updated: cvelistRow.date_updated,
           }
         : null,
     };

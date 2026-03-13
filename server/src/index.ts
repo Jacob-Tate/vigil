@@ -23,8 +23,10 @@ import { startCveEngine, stopCveEngine } from "./cve/cve-engine";
 import { startFeedScheduler, stopFeedScheduler } from "./cve/feed-scheduler";
 import { startKevScheduler, stopKevScheduler } from "./cve/kev-scheduler";
 import { startVulnrichmentScheduler, stopVulnrichmentScheduler } from "./cve/vulnrichment-scheduler";
+import { startCvelistScheduler, stopCvelistScheduler } from "./cve/cvelist-scheduler";
 import { kevRouter } from "./api/kev";
 import { vulnrichmentRouter } from "./api/vulnrichment";
+import { cvelistRouter } from "./api/cvelist";
 import { requireAuth, requireAdmin } from "./middleware/auth";
 import { generalLimiter, authLimiter } from "./middleware/rateLimits";
 import { auditLog } from "./middleware/auditLog";
@@ -73,6 +75,7 @@ app.use("/api/cve/targets", requireAuth, cveTargetsRouter);
 app.use("/api/cve/findings", requireAuth, cveFindingsRouter);
 app.use("/api/kev", requireAuth, kevRouter);
 app.use("/api/vulnrichment", requireAuth, vulnrichmentRouter);
+app.use("/api/cvelist", requireAuth, cvelistRouter);
 app.use("/api/users", requireAdmin, usersRouter);
 
 // Health check
@@ -129,6 +132,7 @@ const server = app.listen(PORT, () => {
   startFeedScheduler();
   startKevScheduler();
   startVulnrichmentScheduler();
+  startCvelistScheduler();
 });
 
 // Graceful shutdown
@@ -140,6 +144,7 @@ process.on("SIGINT", () => {
   stopFeedScheduler();
   stopKevScheduler();
   stopVulnrichmentScheduler();
+  stopCvelistScheduler();
   server.close(() => process.exit(0));
 });
 
@@ -150,5 +155,6 @@ process.on("SIGTERM", () => {
   stopFeedScheduler();
   stopKevScheduler();
   stopVulnrichmentScheduler();
+  stopCvelistScheduler();
   server.close(() => process.exit(0));
 });

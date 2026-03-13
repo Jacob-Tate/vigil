@@ -61,7 +61,8 @@ export type AlertType =
   | "SSL_CHANGED"
   | "CVE_NEW"
   | "CVE_EXPLOIT_ESCALATION"
-  | "CVE_UPDATED";
+  | "CVE_UPDATED"
+  | "CVE_REJECTED";
 
 export type SslAlertType = "SSL_EXPIRING" | "SSL_EXPIRED" | "SSL_ERROR" | "SSL_CHANGED";
 
@@ -201,6 +202,10 @@ export interface CveFinding {
   // Alert state tracking
   enrichment_fingerprint: string | null;
   exploitation_alert_sent: string | null;
+  rejection_alert_sent: number | null; // SQLite 0/1/null
+  // cvelistV5 enrichment (joined from cvelist_cves)
+  cvelist_state: string | null;        // PUBLISHED | REJECTED | null
+  cvelist_cna_description: string | null;
 }
 
 export interface CveTargetWithStats extends CveTarget {
@@ -266,6 +271,13 @@ export interface NvdCveDetail {
     automatable: string | null;
     technical_impact: string | null;
   } | null;
+  cvelist: {
+    state: string;
+    cna_description: string | null;
+    cna_title: string | null;
+    date_published: string | null;
+    date_updated: string | null;
+  } | null;
 }
 
 export interface CisaKevEntry {
@@ -305,6 +317,14 @@ export interface VulnrichmentSyncState {
   last_synced_at: string | null;
   is_syncing: boolean;
   exploitation_breakdown: SsvcExploitationStat[];
+}
+
+export interface CvelistSyncState {
+  total: number;
+  rejected_count: number;
+  last_synced_at: string | null;
+  is_syncing: boolean;
+  last_repo_version: string | null;
 }
 
 // Auth types
