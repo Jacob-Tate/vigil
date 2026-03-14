@@ -1,10 +1,14 @@
 use std::{
     path::{Path, PathBuf},
     process::Command,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicUsize, Ordering as AtomicOrdering},
+        Arc, Mutex,
+    },
 };
 
-use serde_json::Value;
+use rayon::prelude::*;
+use serde::Deserialize;
 
 use crate::{db::DbPool, types::SyncProgress};
 
@@ -14,6 +18,55 @@ const BATCH_SIZE: usize = 500;
 pub struct CvelistSyncResult {
     pub count: usize,
 }
+
+// --- Typed deserialization structs ---
+
+#[derive(Deserialize)]
+struct CveDoc {
+    #[serde(rename = "cveMetadata")]
+    cve_metadata: CveMetadata,
+    containers: Containers,
+}
+
+#[derive(Deserialize)]
+struct CveMetadata {
+    #[serde(rename = "cveId")]
+    cve_id: String,
+    state: String,
+    #[serde(rename = "datePublished")]
+    date_published: Option<String>,
+    #[serde(rename = "dateUpdated")]
+    date_updated: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct Containers {
+    cna: Cna,
+}
+
+#[derive(Deserialize)]
+struct Cna {
+    title: Option<String>,
+    descriptions: Option<Vec<CveDescription>>,
+    affected: Option<Vec<CveAffected>>,
+}
+
+#[derive(Deserialize)]
+struct CveDescription {
+    lang: Option<String>,
+    value: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct CveAffected {
+    vendor: Option<String>,
+    product: Option<String>,
+    versions: Option<serde_json::Value>,
+    #[serde(rename = "defaultStatus")]
+    default_status: Option<String>,
+}
+
+// --- Internal row types ---
 
 struct CvelistRow {
     cve_id: String,
@@ -60,6 +113,8 @@ pub async fn sync_cvelist(
             git_pull(&repo_dir_str)?;
         }
 
+        set_progress("scan", "Scanning CVE file index…".to_string(), 0, 0);
+
         let repo_version = git_head(&repo_dir_str).unwrap_or_default();
 
         // Check if already up to date
@@ -81,6 +136,7 @@ pub async fn sync_cvelist(
         }
 
         // Determine files to process
+        set_progress("scan", "Building file list…".to_string(), 0, 0);
         let files_to_process: Vec<PathBuf> = if let Some(ref last) = last_hash {
             if !last.is_empty() && !repo_version.is_empty() {
                 match git_diff_files(&repo_dir_str, last) {
@@ -114,18 +170,27 @@ pub async fn sync_cvelist(
         tracing::info!(count = total_files, "[cvelist] files to process");
         set_progress("parse", format!("Parsing {} CVE files…", total_files), 0, total_files);
 
-        // Sequential parse with progress every 5 000 files
-        let mut parsed: Vec<CvelistRow> = Vec::with_capacity(total_files);
-        for (i, path) in files_to_process.iter().enumerate() {
-            if i > 0 && i % 5_000 == 0 {
-                set_progress("parse", format!("Parsing CVE files… {}/{}", i, total_files), i, total_files);
-            }
-            let Some(raw) = std::fs::read_to_string(path).ok() else { continue };
-            let Ok(record) = serde_json::from_str::<Value>(&raw) else { continue };
-            if let Some(row) = extract_cvelist(&record) {
-                parsed.push(row);
-            }
-        }
+        // Parallel parse via Rayon
+        let files_done_atomic = Arc::new(AtomicUsize::new(0));
+        let files_done_clone = files_done_atomic.clone();
+
+        let parsed: Vec<CvelistRow> = files_to_process
+            .par_iter()
+            .filter_map(|path| {
+                let raw = std::fs::read_to_string(path).ok()?;
+                let doc = serde_json::from_str::<CveDoc>(&raw).ok()?;
+                let done = files_done_clone.fetch_add(1, AtomicOrdering::Relaxed) + 1;
+                if done % 5_000 == 0 {
+                    set_progress(
+                        "parse",
+                        format!("Parsing CVE files… {}/{}", done, total_files),
+                        done,
+                        total_files,
+                    );
+                }
+                extract_cvelist(doc)
+            })
+            .collect();
 
         let total_parsed = parsed.len();
         tracing::info!(count = total_parsed, "[cvelist] parsed CVE records — starting upsert");
@@ -134,47 +199,81 @@ pub async fn sync_cvelist(
         let synced_at = chrono::Utc::now().to_rfc3339();
         let mut count = 0usize;
 
-        for chunk in parsed.chunks(BATCH_SIZE) {
+        // Temporarily relax fsync for bulk import speed
+        {
             let conn = db.lock().unwrap();
-            conn.execute_batch("BEGIN IMMEDIATE")?;
-            let result: rusqlite::Result<()> = (|| {
-                let mut stmt_cve = conn.prepare_cached(
-                    "INSERT OR REPLACE INTO cvelist_cves
-                     (cve_id, state, cna_description, cna_title, date_published, date_updated, synced_at)
-                     VALUES (?1,?2,?3,?4,?5,?6,?7)",
-                )?;
-                let mut stmt_del = conn.prepare_cached(
-                    "DELETE FROM cvelist_affected WHERE cve_id = ?1",
-                )?;
-                let mut stmt_aff = conn.prepare_cached(
-                    "INSERT INTO cvelist_affected
-                     (cve_id, vendor, product, versions_json, default_status)
-                     VALUES (?1,?2,?3,?4,?5)",
-                )?;
-                for row in chunk {
-                    stmt_cve.execute(rusqlite::params![
-                        row.cve_id, row.state, row.cna_description, row.cna_title,
-                        row.date_published, row.date_updated, synced_at,
-                    ])?;
-                    stmt_del.execute(rusqlite::params![row.cve_id])?;
-                    for aff in &row.affected {
-                        stmt_aff.execute(rusqlite::params![
-                            row.cve_id, aff.vendor, aff.product,
-                            aff.versions_json, aff.default_status,
+            conn.execute_batch("PRAGMA synchronous = OFF; PRAGMA cache_size = -131072;")?;
+        }
+
+        for chunk in parsed.chunks(BATCH_SIZE) {
+            // Explicit block so the MutexGuard drops (lock released) before the yield.
+            let batch_result: anyhow::Result<()> = {
+                let conn = db.lock().unwrap();
+                conn.execute_batch("BEGIN IMMEDIATE")?;
+                let result: rusqlite::Result<()> = (|| {
+                    let mut stmt_cve = conn.prepare_cached(
+                        "INSERT OR REPLACE INTO cvelist_cves
+                         (cve_id, state, cna_description, cna_title, date_published, date_updated, synced_at)
+                         VALUES (?1,?2,?3,?4,?5,?6,?7)",
+                    )?;
+                    let mut stmt_del = conn.prepare_cached(
+                        "DELETE FROM cvelist_affected WHERE cve_id = ?1",
+                    )?;
+                    let mut stmt_aff = conn.prepare_cached(
+                        "INSERT INTO cvelist_affected
+                         (cve_id, vendor, product, versions_json, default_status)
+                         VALUES (?1,?2,?3,?4,?5)",
+                    )?;
+                    for row in chunk {
+                        stmt_cve.execute(rusqlite::params![
+                            row.cve_id, row.state, row.cna_description, row.cna_title,
+                            row.date_published, row.date_updated, synced_at,
                         ])?;
+                        stmt_del.execute(rusqlite::params![row.cve_id])?;
+                        for aff in &row.affected {
+                            stmt_aff.execute(rusqlite::params![
+                                row.cve_id, aff.vendor, aff.product,
+                                aff.versions_json, aff.default_status,
+                            ])?;
+                        }
+                    }
+                    Ok(())
+                })();
+                match result {
+                    Ok(()) => { conn.execute_batch("COMMIT")?; Ok(()) }
+                    Err(e) => {
+                        conn.execute_batch("ROLLBACK")?;
+                        Err(anyhow::anyhow!(e))
                     }
                 }
-                Ok(())
-            })();
-            match result {
-                Ok(()) => conn.execute_batch("COMMIT")?,
-                Err(e) => { conn.execute_batch("ROLLBACK")?; return Err(e.into()); }
+                // conn (MutexGuard) drops here — lock released before yield
+            };
+
+            if let Err(e) = batch_result {
+                // Restore pragmas before propagating the error
+                if let Ok(conn) = db.lock() {
+                    let _ = conn.execute_batch("PRAGMA synchronous = NORMAL; PRAGMA cache_size = -65536;");
+                }
+                return Err(e);
             }
+
             count += chunk.len();
-            // Emit insert progress every 10 batches (5 000 records)
-            if (count / BATCH_SIZE) % 10 == 0 {
-                set_progress("insert", format!("Inserting CVE records… {}/{}", count, total_parsed), count, total_parsed);
-            }
+            set_progress(
+                "insert",
+                format!("Inserting CVE records… {}/{}", count, total_parsed),
+                count,
+                total_parsed,
+            );
+
+            // Yield briefly so status-endpoint threads can acquire the DB lock
+            // between batches (prevents mutex barging on Windows).
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+
+        // Restore pragmas after bulk import
+        {
+            let conn = db.lock().unwrap();
+            conn.execute_batch("PRAGMA synchronous = NORMAL; PRAGMA cache_size = -65536;")?;
         }
 
         // Update sync state
@@ -194,40 +293,40 @@ pub async fn sync_cvelist(
     .await?
 }
 
-fn extract_cvelist(record: &Value) -> Option<CvelistRow> {
-    let meta = &record["cveMetadata"];
-    let cve_id = meta["cveId"].as_str()?.to_string();
-    let state = meta["state"].as_str()?.to_string();
-    if !cve_id.starts_with("CVE-") { return None; }
+fn extract_cvelist(doc: CveDoc) -> Option<CvelistRow> {
+    let meta = doc.cve_metadata;
+    let cve_id = meta.cve_id;
+    if !cve_id.starts_with("CVE-") {
+        return None;
+    }
+    let state = meta.state;
+    let cna = doc.containers.cna;
 
-    let cna = &record["containers"]["cna"];
-    let descriptions = cna["descriptions"].as_array();
-    let cna_description = descriptions.and_then(|ds| {
+    let cna_description = cna.descriptions.as_deref().and_then(|ds| {
         ds.iter()
-            .find(|d| d["lang"].as_str().map(|l| l == "en" || l.starts_with("en")).unwrap_or(false))
-            .and_then(|d| d["value"].as_str())
-            .map(|s| s.to_string())
+            .find(|d| d.lang.as_deref().map(|l| l == "en" || l.starts_with("en")).unwrap_or(false))
+            .and_then(|d| d.value.clone())
     });
 
-    let cna_title = cna["title"].as_str().map(|s| s.to_string());
-    let date_published = meta["datePublished"].as_str().map(|s| s.to_string());
-    let date_updated = meta["dateUpdated"].as_str().map(|s| s.to_string());
+    let cna_title = cna.title;
+    let date_published = meta.date_published;
+    let date_updated = meta.date_updated;
 
-    let affected = cna["affected"]
-        .as_array()
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|a| {
-                    let product = a["product"].as_str()?.to_string();
-                    let vendor = a["vendor"].as_str().map(|v| v.to_lowercase());
-                    let versions_json = a.get("versions")
-                        .and_then(|v| if v.is_array() { Some(v.to_string()) } else { None });
-                    let default_status = a["defaultStatus"].as_str().map(|s| s.to_string());
-                    Some(AffectedEntry { vendor, product: product.to_lowercase(), versions_json, default_status })
-                })
-                .collect()
+    let affected = cna
+        .affected
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|a| {
+            let product = a.product?.to_lowercase();
+            let vendor = a.vendor.map(|v| v.to_lowercase());
+            let versions_json = a
+                .versions
+                .filter(|v| v.is_array())
+                .map(|v| v.to_string());
+            let default_status = a.default_status;
+            Some(AffectedEntry { vendor, product, versions_json, default_status })
         })
-        .unwrap_or_default();
+        .collect();
 
     Some(CvelistRow { cve_id, state, cna_description, cna_title, date_published, date_updated, affected })
 }

@@ -204,6 +204,7 @@ CREATE TABLE IF NOT EXISTS cvelist_affected (
     versions_json   TEXT,             -- JSON array of version range objects
     default_status  TEXT              -- affected | unaffected | unknown
 );
+CREATE INDEX IF NOT EXISTS idx_cvelist_affected_cve_id  ON cvelist_affected(cve_id);
 CREATE INDEX IF NOT EXISTS idx_cvelist_affected_product ON cvelist_affected(product);
 
 -- Users: admin and viewer roles

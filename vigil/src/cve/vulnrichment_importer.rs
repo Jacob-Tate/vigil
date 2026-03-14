@@ -1,10 +1,14 @@
 use std::{
     path::{Path, PathBuf},
     process::Command,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicUsize, Ordering as AtomicOrdering},
+        Arc, Mutex,
+    },
 };
 
-use serde_json::Value;
+use rayon::prelude::*;
+use serde::Deserialize;
 
 use crate::{db::DbPool, types::SyncProgress};
 
@@ -14,6 +18,59 @@ const BATCH_SIZE: usize = 500;
 
 pub struct VulnrichmentSyncResult {
     pub count: usize,
+}
+
+// --- Typed deserialization structs ---
+
+#[derive(Deserialize)]
+struct VulnDoc {
+    containers: VulnContainers,
+}
+
+#[derive(Deserialize)]
+struct VulnContainers {
+    adp: Option<Vec<Adp>>,
+}
+
+#[derive(Deserialize)]
+struct Adp {
+    #[serde(rename = "providerMetadata")]
+    provider_metadata: ProviderMetadata,
+    metrics: Option<Vec<Metric>>,
+}
+
+#[derive(Deserialize)]
+struct ProviderMetadata {
+    #[serde(rename = "orgId")]
+    org_id: String,
+}
+
+#[derive(Deserialize)]
+struct Metric {
+    other: Option<MetricOther>,
+}
+
+#[derive(Deserialize)]
+struct MetricOther {
+    #[serde(rename = "type")]
+    type_: String,
+    content: Option<MetricContent>,
+}
+
+#[derive(Deserialize)]
+struct MetricContent {
+    timestamp: Option<String>,
+    options: Option<Vec<serde_json::Value>>,
+}
+
+// --- Internal row type ---
+
+struct SsvcRow {
+    cve_id: String,
+    exploitation: Option<String>,
+    automatable: Option<String>,
+    technical_impact: Option<String>,
+    timestamp: Option<String>,
 }
 
 pub async fn sync_vulnrichment(
@@ -43,61 +100,111 @@ pub async fn sync_vulnrichment(
             git_clone(REPO_URL, &repo_dir_str, &["--depth", "1"])?;
         }
 
-        // Walk all JSON files
+        set_progress("scan", "Scanning Vulnrichment file index…".to_string(), 0, 0);
+
+        // Build file list
+        set_progress("scan", "Building file list…".to_string(), 0, 0);
         let json_files = walk_json_files(&repo_dir);
         let total_files = json_files.len();
-        set_progress("insert", format!("Processing {} SSVC files…", total_files), 0, total_files);
-        let synced_at = chrono::Utc::now().to_rfc3339();
+        tracing::info!(count = total_files, "[vulnrichment] files to process");
+        set_progress("parse", format!("Parsing {} SSVC files…", total_files), 0, total_files);
 
-        let mut count = 0usize;
-        let mut batch: Vec<(String, Option<String>, Option<String>, Option<String>, Option<String>)> = Vec::new();
+        // Parallel parse via Rayon
+        let files_done_atomic = Arc::new(AtomicUsize::new(0));
+        let files_done_clone = files_done_atomic.clone();
 
-        let flush = |batch: &mut Vec<_>, synced_at: &str| -> anyhow::Result<()> {
-            if batch.is_empty() { return Ok(()); }
-            let conn = db.lock().unwrap();
-            conn.execute_batch("BEGIN IMMEDIATE")?;
-            let result: rusqlite::Result<()> = (|| {
-                let mut stmt = conn.prepare_cached(
-                    "INSERT OR REPLACE INTO cisa_ssvc
-                     (cve_id, exploitation, automatable, technical_impact, timestamp, synced_at)
-                     VALUES (?1,?2,?3,?4,?5,?6)",
-                )?;
-                for (cve_id, exploitation, automatable, technical_impact, timestamp) in batch.iter() {
-                    stmt.execute(rusqlite::params![
-                        cve_id, exploitation, automatable, technical_impact, timestamp, synced_at
-                    ])?;
+        let rows: Vec<SsvcRow> = json_files
+            .par_iter()
+            .filter_map(|path| {
+                let cve_id = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(|n| n.trim_end_matches(".json").to_string())?;
+                if !cve_id.starts_with("CVE-") {
+                    return None;
                 }
-                Ok(())
-            })();
-            batch.clear();
-            match result {
-                Ok(()) => { conn.execute_batch("COMMIT")?; Ok(()) }
-                Err(e) => { conn.execute_batch("ROLLBACK")?; Err(e.into()) }
-            }
-        };
+                let raw = std::fs::read_to_string(path).ok()?;
+                let doc = serde_json::from_str::<VulnDoc>(&raw).ok()?;
+                let done = files_done_clone.fetch_add(1, AtomicOrdering::Relaxed) + 1;
+                if done % 2_000 == 0 {
+                    set_progress(
+                        "parse",
+                        format!("Parsing SSVC files… {}/{}", done, total_files),
+                        done,
+                        total_files,
+                    );
+                }
+                extract_ssvc(cve_id, doc)
+            })
+            .collect();
 
-        for file_path in &json_files {
-            let Ok(raw) = std::fs::read_to_string(file_path) else { continue };
-            let Ok(record) = serde_json::from_str::<Value>(&raw) else { continue };
-            let Some(ssvc) = extract_ssvc(&record) else { continue };
+        let total_parsed = rows.len();
+        tracing::info!(count = total_parsed, "[vulnrichment] parsed SSVC records — starting upsert");
+        set_progress("insert", format!("Inserting {} SSVC records…", total_parsed), 0, total_parsed);
 
-            let cve_id = file_path
-                .file_name().and_then(|n| n.to_str())
-                .map(|n| n.trim_end_matches(".json").to_string())
-                .unwrap_or_default();
-            if !cve_id.starts_with("CVE-") { continue; }
+        let synced_at = chrono::Utc::now().to_rfc3339();
+        let mut count = 0usize;
 
-            batch.push((cve_id, ssvc.exploitation, ssvc.automatable, ssvc.technical_impact, ssvc.timestamp));
-
-            if batch.len() >= BATCH_SIZE {
-                count += batch.len();
-                flush(&mut batch, &synced_at)?;
-                set_progress("insert", format!("Inserting SSVC records… {}/{}", count, total_files), count, total_files);
-            }
+        // Temporarily relax fsync for bulk import speed
+        {
+            let conn = db.lock().unwrap();
+            conn.execute_batch("PRAGMA synchronous = OFF; PRAGMA cache_size = -131072;")?;
         }
 
-        count += batch.len();
-        flush(&mut batch, &synced_at)?;
+        for chunk in rows.chunks(BATCH_SIZE) {
+            // Explicit block so MutexGuard drops (lock released) before the yield.
+            let batch_result: anyhow::Result<()> = {
+                let conn = db.lock().unwrap();
+                conn.execute_batch("BEGIN IMMEDIATE")?;
+                let result: rusqlite::Result<()> = (|| {
+                    let mut stmt = conn.prepare_cached(
+                        "INSERT OR REPLACE INTO cisa_ssvc
+                         (cve_id, exploitation, automatable, technical_impact, timestamp, synced_at)
+                         VALUES (?1,?2,?3,?4,?5,?6)",
+                    )?;
+                    for row in chunk {
+                        stmt.execute(rusqlite::params![
+                            row.cve_id, row.exploitation, row.automatable,
+                            row.technical_impact, row.timestamp, synced_at,
+                        ])?;
+                    }
+                    Ok(())
+                })();
+                match result {
+                    Ok(()) => { conn.execute_batch("COMMIT")?; Ok(()) }
+                    Err(e) => {
+                        conn.execute_batch("ROLLBACK")?;
+                        Err(anyhow::anyhow!(e))
+                    }
+                }
+                // conn (MutexGuard) drops here — lock released before yield
+            };
+
+            if let Err(e) = batch_result {
+                if let Ok(conn) = db.lock() {
+                    let _ = conn.execute_batch("PRAGMA synchronous = NORMAL; PRAGMA cache_size = -65536;");
+                }
+                return Err(e);
+            }
+
+            count += chunk.len();
+            set_progress(
+                "insert",
+                format!("Inserting SSVC records… {}/{}", count, total_parsed),
+                count,
+                total_parsed,
+            );
+
+            // Yield briefly so status-endpoint threads can acquire the DB lock
+            // between batches (prevents mutex barging on Windows).
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+
+        // Restore pragmas after bulk import
+        {
+            let conn = db.lock().unwrap();
+            conn.execute_batch("PRAGMA synchronous = NORMAL; PRAGMA cache_size = -65536;")?;
+        }
 
         tracing::info!(count, "[vulnrichment] upserted SSVC entries");
         Ok(VulnrichmentSyncResult { count })
@@ -105,33 +212,45 @@ pub async fn sync_vulnrichment(
     .await?
 }
 
-struct SsvcData {
-    exploitation: Option<String>,
-    automatable: Option<String>,
-    technical_impact: Option<String>,
-    timestamp: Option<String>,
-}
-
-fn extract_ssvc(record: &Value) -> Option<SsvcData> {
-    let adp_list = record["containers"]["adp"].as_array()?;
+fn extract_ssvc(cve_id: String, doc: VulnDoc) -> Option<SsvcRow> {
+    let adp_list = doc.containers.adp?;
     for adp in adp_list {
-        let org_id = adp["providerMetadata"]["orgId"].as_str().unwrap_or("");
-        if org_id != CISA_ORG_ID { continue; }
-        let metrics = adp["metrics"].as_array()?;
+        if adp.provider_metadata.org_id != CISA_ORG_ID {
+            continue;
+        }
+        let Some(metrics) = adp.metrics else { continue };
         for metric in metrics {
-            if metric["other"]["type"].as_str() != Some("ssvc") { continue; }
-            let options = metric["other"]["content"]["options"].as_array()?;
+            let Some(other) = metric.other else { continue };
+            if other.type_ != "ssvc" {
+                continue;
+            }
+            let Some(content) = other.content else { continue };
+            let Some(options) = content.options else { continue };
+
             let mut exploitation: Option<String> = None;
             let mut automatable: Option<String> = None;
             let mut technical_impact: Option<String> = None;
-            for opt in options {
-                if let Some(v) = opt["Exploitation"].as_str() { exploitation = Some(v.to_lowercase()); }
-                if let Some(v) = opt["Automatable"].as_str() { automatable = Some(v.to_lowercase()); }
-                if let Some(v) = opt["Technical Impact"].as_str() { technical_impact = Some(v.to_lowercase()); }
+            for opt in &options {
+                if let Some(v) = opt["Exploitation"].as_str() {
+                    exploitation = Some(v.to_lowercase());
+                }
+                if let Some(v) = opt["Automatable"].as_str() {
+                    automatable = Some(v.to_lowercase());
+                }
+                if let Some(v) = opt["Technical Impact"].as_str() {
+                    technical_impact = Some(v.to_lowercase());
+                }
             }
-            if exploitation.is_none() && automatable.is_none() && technical_impact.is_none() { continue; }
-            let timestamp = metric["other"]["content"]["timestamp"].as_str().map(|s| s.to_string());
-            return Some(SsvcData { exploitation, automatable, technical_impact, timestamp });
+            if exploitation.is_none() && automatable.is_none() && technical_impact.is_none() {
+                continue;
+            }
+            return Some(SsvcRow {
+                cve_id,
+                exploitation,
+                automatable,
+                technical_impact,
+                timestamp: content.timestamp,
+            });
         }
     }
     None
@@ -170,4 +289,3 @@ fn git_pull(repo_dir: &str) -> anyhow::Result<()> {
     if !status.success() { anyhow::bail!("git pull failed in {}", repo_dir); }
     Ok(())
 }
-
