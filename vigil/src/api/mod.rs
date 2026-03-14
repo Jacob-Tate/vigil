@@ -75,7 +75,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/nvd/sync", post(nvd::trigger_sync))
         .route("/api/nvd/status", get(nvd::sync_status))
         .route("/api/nvd/browse/search", get(nvd::browse_search))
-        .route("/api/nvd/browse/detail/:cveId", get(nvd::browse_detail))
+        .route("/api/nvd/browse/cve/:cveId", get(nvd::browse_detail))
         // CVE targets
         .route(
             "/api/cve/targets",

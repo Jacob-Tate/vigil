@@ -54,11 +54,10 @@ export default function CveTargetDetail() {
   const handleCheck = async () => {
     setChecking(true);
     try {
-      await triggerCveCheck(targetId);
-      toast.success("Check complete");
+      const result = await triggerCveCheck(targetId);
+      setTarget(result.target);
       await refetch();
-      const t = await getCveTarget(targetId);
-      setTarget(t);
+      toast.success("Check complete");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Check failed");
     } finally {

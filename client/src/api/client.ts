@@ -12,7 +12,6 @@ import {
   SslCheckStats,
   PaginatedSslChecks,
   SslTargetFormData,
-  CveTarget,
   CveTargetWithStats,
   CveTargetFormData,
   CveFinding,
@@ -164,7 +163,7 @@ export const updateCveTarget = (id: number, data: Partial<CveTargetFormData>) =>
 export const deleteCveTarget = (id: number) =>
   request<void>(`/cve/targets/${id}`, { method: "DELETE" });
 export const triggerCveCheck = (id: number) =>
-  request<{ ok: boolean; target: CveTarget }>(`/cve/targets/${id}/check`, { method: "POST" });
+  request<{ ok: boolean; target: CveTargetWithStats }>(`/cve/targets/${id}/check`, { method: "POST" });
 
 // CVE Findings
 export const getCveFindings = (

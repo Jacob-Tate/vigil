@@ -59,8 +59,14 @@ pub async fn trigger_sync(_admin: RequireAdmin, State(state): State<AppState>) -
 #[derive(Deserialize)]
 pub struct NvdSearchQuery {
     q: Option<String>,
+    severity: Option<String>,
+    #[serde(rename = "minScore")]
+    min_score: Option<f64>,
+    from: Option<String>,
+    to: Option<String>,
+    kev: Option<bool>,
+    page: Option<i64>,
     limit: Option<i64>,
-    offset: Option<i64>,
 }
 
 // GET /api/nvd/browse/search
@@ -70,73 +76,109 @@ pub async fn browse_search(
     Query(q): Query<NvdSearchQuery>,
 ) -> Result<Json<Value>, AppError> {
     let db = state.db.clone();
-    let (cves, total): (Vec<Value>, i64) = tokio::task::spawn_blocking(move || {
+    let (cves, total, page, limit): (Vec<Value>, i64, i64, i64) = tokio::task::spawn_blocking(move || {
         let conn = db.lock().unwrap();
-        let limit = q.limit.unwrap_or(20).min(100);
-        let offset = q.offset.unwrap_or(0);
-        let search = q.q.unwrap_or_default();
+        let limit = q.limit.unwrap_or(50).min(100);
+        let page = q.page.unwrap_or(1).max(1);
+        let offset = (page - 1) * limit;
 
-        let (where_clause, pattern): (String, Option<String>) = if search.is_empty() {
-            (String::new(), None)
+        use rusqlite::types::Value as SqlVal;
+        let mut conditions: Vec<String> = Vec::new();
+        let mut filter_params: Vec<SqlVal> = Vec::new();
+
+        if let Some(ref s) = q.q {
+            if !s.is_empty() {
+                conditions.push("(n.cve_id LIKE ? OR n.description LIKE ?)".to_string());
+                let pat = format!("%{}%", s);
+                filter_params.push(SqlVal::Text(pat.clone()));
+                filter_params.push(SqlVal::Text(pat));
+            }
+        }
+        if let Some(ref sev) = q.severity {
+            conditions.push("n.cvss_severity = ?".to_string());
+            filter_params.push(SqlVal::Text(sev.clone()));
+        }
+        if let Some(score) = q.min_score {
+            conditions.push("n.cvss_score >= ?".to_string());
+            filter_params.push(SqlVal::Real(score));
+        }
+        if let Some(ref f) = q.from {
+            conditions.push("n.published_at >= ?".to_string());
+            filter_params.push(SqlVal::Text(f.clone()));
+        }
+        if let Some(ref t) = q.to {
+            conditions.push("n.published_at <= ?".to_string());
+            filter_params.push(SqlVal::Text(t.clone()));
+        }
+        if q.kev.unwrap_or(false) {
+            conditions.push("k.cve_id IS NOT NULL".to_string());
+        }
+
+        let where_clause = if conditions.is_empty() {
+            String::new()
         } else {
-            ("WHERE (cve_id LIKE ? OR description LIKE ?)".into(), Some(format!("%{}%", search)))
+            format!("WHERE {}", conditions.join(" AND "))
         };
 
-        let count_sql = format!("SELECT COUNT(*) FROM nvd_cves {}", where_clause);
-        let total: i64 = if let Some(ref p) = pattern {
-            conn.query_row(&count_sql, rusqlite::params![p, p], |r| r.get(0))?
-        } else {
-            conn.query_row(&count_sql, [], |r| r.get(0))?
-        };
-
-        let data_sql = format!(
-            "SELECT cve_id, published_at, last_modified_at, cvss_score, cvss_severity, description, nvd_url \
-             FROM nvd_cves {} ORDER BY published_at DESC LIMIT ? OFFSET ?",
+        let count_sql = format!(
+            "SELECT COUNT(*) FROM nvd_cves n LEFT JOIN cisa_kev k ON n.cve_id = k.cve_id {}",
             where_clause
         );
+        let count_refs: Vec<&dyn rusqlite::ToSql> =
+            filter_params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+        let total: i64 = conn.query_row(&count_sql, count_refs.as_slice(), |r| r.get(0))?;
 
-        let rows: Vec<Value> = if let Some(ref p) = pattern {
-            conn.prepare(&data_sql)?
-                .query_map(rusqlite::params![p, p, limit, offset], |row| {
-                    Ok(json!({
-                        "cve_id": row.get::<_, String>(0)?,
-                        "published_at": row.get::<_, Option<String>>(1)?,
-                        "last_modified_at": row.get::<_, Option<String>>(2)?,
-                        "cvss_score": row.get::<_, Option<f64>>(3)?,
-                        "cvss_severity": row.get::<_, Option<String>>(4)?,
-                        "description": row.get::<_, Option<String>>(5)?,
-                        "nvd_url": row.get::<_, Option<String>>(6)?,
-                    }))
-                })?
-                .collect::<rusqlite::Result<_>>()?
-        } else {
-            conn.prepare(&data_sql)?
-                .query_map(rusqlite::params![limit, offset], |row| {
-                    Ok(json!({
-                        "cve_id": row.get::<_, String>(0)?,
-                        "published_at": row.get::<_, Option<String>>(1)?,
-                        "last_modified_at": row.get::<_, Option<String>>(2)?,
-                        "cvss_score": row.get::<_, Option<f64>>(3)?,
-                        "cvss_severity": row.get::<_, Option<String>>(4)?,
-                        "description": row.get::<_, Option<String>>(5)?,
-                        "nvd_url": row.get::<_, Option<String>>(6)?,
-                    }))
-                })?
-                .collect::<rusqlite::Result<_>>()?
-        };
+        let data_sql = format!(
+            "SELECT n.cve_id, n.published_at, n.last_modified_at, n.cvss_score, n.cvss_severity, \
+             n.description, n.nvd_url, \
+             CASE WHEN k.cve_id IS NOT NULL THEN 1 ELSE 0 END as is_kev, \
+             s.exploitation as ssvc_exploitation, \
+             cv.state as cvelist_state \
+             FROM nvd_cves n \
+             LEFT JOIN cisa_kev k ON n.cve_id = k.cve_id \
+             LEFT JOIN cisa_ssvc s ON n.cve_id = s.cve_id \
+             LEFT JOIN cvelist_cves cv ON n.cve_id = cv.cve_id \
+             {} ORDER BY n.published_at DESC LIMIT ? OFFSET ?",
+            where_clause
+        );
+        let mut data_params = filter_params;
+        data_params.push(SqlVal::Integer(limit));
+        data_params.push(SqlVal::Integer(offset));
+        let data_refs: Vec<&dyn rusqlite::ToSql> =
+            data_params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
 
-        Ok::<_, rusqlite::Error>((rows, total))
+        let rows: Vec<Value> = conn
+            .prepare(&data_sql)?
+            .query_map(data_refs.as_slice(), |row| {
+                Ok(json!({
+                    "cve_id":           row.get::<_, String>(0)?,
+                    "published_at":     row.get::<_, Option<String>>(1)?,
+                    "last_modified_at": row.get::<_, Option<String>>(2)?,
+                    "cvss_score":       row.get::<_, Option<f64>>(3)?,
+                    "cvss_severity":    row.get::<_, Option<String>>(4)?,
+                    "description":      row.get::<_, Option<String>>(5)?,
+                    "nvd_url":          row.get::<_, Option<String>>(6)?,
+                    "is_kev":           row.get::<_, i64>(7).unwrap_or(0),
+                    "ssvc_exploitation":row.get::<_, Option<String>>(8)?,
+                    "cvelist_state":    row.get::<_, Option<String>>(9)?,
+                }))
+            })?
+            .collect::<rusqlite::Result<_>>()?;
+
+        Ok::<_, rusqlite::Error>((rows, total, page, limit))
     })
     .await
     .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
     .map_err(AppError::Db)?;
 
+    let pages = ((total as f64) / (limit as f64)).ceil() as i64;
     Ok(Json(json!({
         "data": cves,
         "pagination": {
+            "page": page,
+            "limit": limit,
             "total": total,
-            "limit": q.limit.unwrap_or(20),
-            "offset": q.offset.unwrap_or(0),
+            "pages": pages,
         }
     })))
 }

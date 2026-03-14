@@ -71,7 +71,8 @@ fn target_with_stats(conn: &rusqlite::Connection, id: i64) -> rusqlite::Result<O
     let (findings_count, top_cvss_score, top_cvss_severity, kev_count): (i64, Option<f64>, Option<String>, i64) = conn
         .query_row(
             "SELECT COUNT(*), MAX(f.cvss_score), \
-             (SELECT cvss_severity FROM cve_findings WHERE target_id = ?1 AND cvss_score = MAX(f.cvss_score) LIMIT 1), \
+             (SELECT cvss_severity FROM cve_findings WHERE target_id = ?1 \
+              AND cvss_score = (SELECT MAX(cvss_score) FROM cve_findings WHERE target_id = ?1) LIMIT 1), \
              SUM(CASE WHEN k.cve_id IS NOT NULL THEN 1 ELSE 0 END) \
              FROM cve_findings f \
              LEFT JOIN cisa_kev k ON f.cve_id = k.cve_id \
@@ -262,6 +263,19 @@ pub async fn trigger_check(_admin: RequireAdmin, State(state): State<AppState>, 
     .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
     .map_err(|_| AppError::NotFound(format!("CVE target {} not found", id)))?;
 
-    state.cve_engine.reschedule(target).await;
-    Ok(Json(json!({ "ok": true, "queued": true })))
+    // Run the check synchronously so the response reflects the current findings.
+    crate::cve::engine::evaluate_cve_target(&state.db, &state.config, &target).await;
+
+    // Reset the periodic timer for future scheduled checks.
+    state.cve_engine.reschedule(target.clone()).await;
+
+    // Return fresh stats so the frontend doesn't need a separate GET.
+    let db2 = state.db.clone();
+    let updated = tokio::task::spawn_blocking(move || target_with_stats(&db2.lock().unwrap(), id))
+        .await
+        .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
+        .map_err(AppError::Db)?
+        .ok_or_else(|| AppError::NotFound(format!("CVE target {} not found", id)))?;
+
+    Ok(Json(json!({ "ok": true, "target": updated })))
 }
