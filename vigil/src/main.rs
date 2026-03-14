@@ -1,7 +1,6 @@
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{atomic::AtomicBool, Arc, Mutex};
 
 use tokio::sync::RwLock;
-use tokio_util::sync::CancellationToken;
 use tower_http::cors::CorsLayer;
 
 mod api;
@@ -85,6 +84,8 @@ async fn main() -> anyhow::Result<()> {
     let kev_syncing = Arc::new(AtomicBool::new(false));
     let vulnrichment_syncing = Arc::new(AtomicBool::new(false));
     let cvelist_syncing = Arc::new(AtomicBool::new(false));
+    let vulnrichment_progress: Arc<Mutex<Option<types::SyncProgress>>> = Arc::new(Mutex::new(None));
+    let cvelist_progress: Arc<Mutex<Option<types::SyncProgress>>> = Arc::new(Mutex::new(None));
 
     // Start schedulers
     let nvd_token = cve::nvd_scheduler::start(
@@ -102,16 +103,15 @@ async fn main() -> anyhow::Result<()> {
         pool.clone(),
         config_arc.clone(),
         vulnrichment_syncing.clone(),
+        vulnrichment_progress.clone(),
     );
-
-    // DISABLED: CVEList scheduler sync is broken
-    // let cvelist_token = cve::cvelist_scheduler::start(
-    //     pool.clone(),
-    //     config_arc.clone(),
-    //     cvelist_syncing.clone(),
-    //     cve_engine.clone(),
-    // );
-    let cvelist_token = CancellationToken::new();
+    let cvelist_token = cve::cvelist_scheduler::start(
+        pool.clone(),
+        config_arc.clone(),
+        cvelist_syncing.clone(),
+        cve_engine.clone(),
+        cvelist_progress.clone(),
+    );
 
     let state = AppState {
         db: pool,
@@ -123,6 +123,8 @@ async fn main() -> anyhow::Result<()> {
         kev_syncing,
         vulnrichment_syncing,
         cvelist_syncing,
+        vulnrichment_progress,
+        cvelist_progress,
         scheduler_tokens: Arc::new(vec![nvd_token, kev_token, vr_token, cvelist_token]),
     };
 

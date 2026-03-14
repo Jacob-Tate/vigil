@@ -319,6 +319,11 @@ export interface VulnrichmentSyncState {
   last_synced_at: string | null;
   is_syncing: boolean;
   exploitation_breakdown: SsvcExploitationStat[];
+  // Live progress (only present while is_syncing = true)
+  stage?: string;
+  stage_message?: string;
+  files_done?: number;
+  files_total?: number;
 }
 
 export interface CvelistSyncState {
@@ -327,6 +332,11 @@ export interface CvelistSyncState {
   last_synced_at: string | null;
   is_syncing: boolean;
   last_repo_version: string | null;
+  // Live progress (only present while is_syncing = true)
+  stage?: string;
+  stage_message?: string;
+  files_done?: number;
+  files_total?: number;
 }
 
 export interface PaginatedCveFindings {

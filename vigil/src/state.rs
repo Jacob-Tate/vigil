@@ -1,6 +1,6 @@
 use std::sync::{
     atomic::AtomicBool,
-    Arc,
+    Arc, Mutex,
 };
 
 use tokio::sync::RwLock;
@@ -12,7 +12,7 @@ use crate::{
     db::DbPool,
     monitor::engine::MonitorEngine,
     ssl::engine::SslEngine,
-    types::NvdSyncStatus,
+    types::{NvdSyncStatus, SyncProgress},
 };
 
 /// Shared application state injected into every Axum handler via `State<AppState>`.
@@ -29,6 +29,9 @@ pub struct AppState {
     pub kev_syncing: Arc<AtomicBool>,
     pub vulnrichment_syncing: Arc<AtomicBool>,
     pub cvelist_syncing: Arc<AtomicBool>,
+    // In-memory progress state, polled by the status endpoints (None = idle)
+    pub vulnrichment_progress: Arc<Mutex<Option<SyncProgress>>>,
+    pub cvelist_progress: Arc<Mutex<Option<SyncProgress>>>,
     // Scheduler cancellation tokens (held so main can stop them on shutdown)
     pub scheduler_tokens: Arc<Vec<CancellationToken>>,
 }

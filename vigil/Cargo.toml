@@ -82,9 +82,6 @@ webpki-roots = "0.26"
 # Compression (for NVD feed gzip decompression — Phase 4)
 flate2 = "1"
 
-# Parallel iteration (for cvelistV5 file walking — Phase 4)
-rayon = "1"
-
 # Semver (for CVE version range matching — Phase 4)
 semver = "1"
 

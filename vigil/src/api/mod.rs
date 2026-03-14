@@ -105,7 +105,7 @@ pub fn router(state: AppState) -> Router {
         // CVEList
         .route("/api/cvelist", get(cvelist::list))
         .route("/api/cvelist/status", get(cvelist::status))
-        //.route("/api/cvelist/sync", post(cvelist::trigger_sync)) // DISABLED: sync broken
+        .route("/api/cvelist/sync", post(cvelist::trigger_sync))
         // Users (admin only — enforced per-handler)
         .route("/api/users", get(users::list).post(users::create))
         .route(

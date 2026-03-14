@@ -11,6 +11,24 @@ function exploitationColor(level: string): string {
   return "text-gray-500 dark:text-gray-400";
 }
 
+function SyncProgressBar({ done, total, message }: { done: number; total: number; message: string }) {
+  const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  return (
+    <div className="mt-1.5 space-y-1">
+      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+        <span className="truncate max-w-[70%]">{message}</span>
+        <span>{total > 0 ? `${pct}%` : "…"}</span>
+      </div>
+      <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+        <div
+          className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+          style={{ width: total > 0 ? `${pct}%` : "100%", animation: total === 0 ? "pulse 1.5s ease-in-out infinite" : undefined }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function VulnrichmentSyncPanel() {
   const { status, refetch } = useVulnrichmentStatus();
   const { isAdmin } = useAuth();
@@ -18,6 +36,7 @@ export default function VulnrichmentSyncPanel() {
   const [expanded, setExpanded] = useState(false);
 
   const isSyncing = status?.is_syncing ?? false;
+  const hasProgress = isSyncing && status?.stage_message != null;
 
   const handleSync = async () => {
     if (syncing || isSyncing) return;
@@ -37,10 +56,10 @@ export default function VulnrichmentSyncPanel() {
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl mb-6">
       {/* Header row */}
       <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <button
             onClick={() => setExpanded((e) => !e)}
-            className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5 hover:text-gray-900 dark:hover:text-white"
+            className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5 hover:text-gray-900 dark:hover:text-white shrink-0"
           >
             <svg
               className={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-90" : ""}`}
@@ -48,29 +67,24 @@ export default function VulnrichmentSyncPanel() {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
             CISA Vulnrichment (SSVC)
           </button>
 
           {isSyncing ? (
-            <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full font-medium animate-pulse">
+            <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full font-medium animate-pulse shrink-0">
               Syncing…
             </span>
           ) : (status?.total ?? 0) > 0 ? (
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
               {status!.total.toLocaleString()} SSVC entries
               {status!.last_synced_at
                 ? ` · synced ${formatDistanceToNow(new Date(status!.last_synced_at), { addSuffix: true })}`
                 : ""}
             </span>
           ) : (
-            <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full font-medium">
+            <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full font-medium shrink-0">
               No data — sync required
             </span>
           )}
@@ -80,12 +94,23 @@ export default function VulnrichmentSyncPanel() {
           <button
             onClick={() => void handleSync()}
             disabled={syncing || isSyncing}
-            className="text-xs bg-gray-900 dark:bg-gray-700 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="ml-3 text-xs bg-gray-900 dark:bg-gray-700 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           >
             {isSyncing ? "Syncing…" : "Sync SSVC"}
           </button>
         )}
       </div>
+
+      {/* Live progress bar (shown while syncing) */}
+      {hasProgress && (
+        <div className="px-4 pb-3">
+          <SyncProgressBar
+            done={status!.files_done ?? 0}
+            total={status!.files_total ?? 0}
+            message={status!.stage_message!}
+          />
+        </div>
+      )}
 
       {/* Expandable exploitation breakdown */}
       {expanded && status && (

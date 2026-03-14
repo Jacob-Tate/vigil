@@ -11,7 +11,7 @@ use crate::{
 // GET /api/vulnrichment/status
 pub async fn status(_auth: RequireAuth, State(state): State<AppState>) -> Result<Json<Value>, AppError> {
     let db = state.db.clone();
-    let st: VulnrichmentSyncState = tokio::task::spawn_blocking(move || {
+    let mut st: VulnrichmentSyncState = tokio::task::spawn_blocking(move || {
         let conn = db.lock().unwrap();
         let total: i64 = conn.query_row("SELECT COUNT(*) FROM cisa_ssvc", [], |r| r.get(0)).unwrap_or(0);
         let last_synced_at: Option<String> = conn.query_row("SELECT MAX(synced_at) FROM cisa_ssvc", [], |r| r.get(0)).ok().flatten();
@@ -21,14 +21,31 @@ pub async fn status(_auth: RequireAuth, State(state): State<AppState>) -> Result
             exploitation: row.get(0)?,
             count: row.get(1)?,
         }))?.collect::<rusqlite::Result<_>>()?;
-        Ok::<_, rusqlite::Error>(VulnrichmentSyncState { total, last_synced_at, is_syncing: false, exploitation_breakdown }) // is_syncing overwritten below
+        Ok::<_, rusqlite::Error>(VulnrichmentSyncState {
+            total, last_synced_at, is_syncing: false, exploitation_breakdown,
+            stage: None, stage_message: None, files_done: None, files_total: None,
+        })
     })
     .await
     .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
     .map_err(AppError::Db)?;
+
     use std::sync::atomic::Ordering;
-    let is_syncing = state.vulnrichment_syncing.load(Ordering::Relaxed);
-    Ok(Json(json!(VulnrichmentSyncState { is_syncing, ..st })))
+    st.is_syncing = state.vulnrichment_syncing.load(Ordering::Relaxed);
+
+    // Merge in live progress if a sync is running
+    if st.is_syncing {
+        if let Ok(p) = state.vulnrichment_progress.lock() {
+            if let Some(ref prog) = *p {
+                st.stage = Some(prog.stage.clone());
+                st.stage_message = Some(prog.message.clone());
+                st.files_done = Some(prog.files_done);
+                st.files_total = Some(prog.files_total);
+            }
+        }
+    }
+
+    Ok(Json(json!(st)))
 }
 
 // GET /api/vulnrichment  (list SSVC data)
@@ -63,8 +80,9 @@ pub async fn trigger_sync(_admin: RequireAdmin, State(state): State<AppState>) -
     let db = state.db.clone();
     let config = state.config.clone();
     let is_syncing = state.vulnrichment_syncing.clone();
+    let progress = state.vulnrichment_progress.clone();
     tokio::spawn(async move {
-        crate::cve::vulnrichment_scheduler::run(&db, &config, &is_syncing).await;
+        crate::cve::vulnrichment_scheduler::run(&db, &config, &is_syncing, &progress).await;
     });
     Ok(Json(json!({ "ok": true, "queued": true })))
 }

@@ -11,7 +11,7 @@ use crate::{
 // GET /api/cvelist/status
 pub async fn status(_auth: RequireAuth, State(state): State<AppState>) -> Result<Json<Value>, AppError> {
     let db = state.db.clone();
-    let st: CvelistSyncState = tokio::task::spawn_blocking(move || {
+    let mut st: CvelistSyncState = tokio::task::spawn_blocking(move || {
         let conn = db.lock().unwrap();
         let total: i64 = conn.query_row("SELECT COUNT(*) FROM cvelist_cves WHERE state = 'PUBLISHED'", [], |r| r.get(0)).unwrap_or(0);
         let rejected_count: i64 = conn.query_row("SELECT COUNT(*) FROM cvelist_cves WHERE state = 'REJECTED'", [], |r| r.get(0)).unwrap_or(0);
@@ -23,16 +23,34 @@ pub async fn status(_auth: RequireAuth, State(state): State<AppState>) -> Result
             total,
             rejected_count,
             last_synced_at,
-            is_syncing: false, // overwritten below
+            is_syncing: false,
             last_repo_version: repo_version.filter(|s| s.len() >= 8).map(|s| s[..8].to_string()),
+            stage: None,
+            stage_message: None,
+            files_done: None,
+            files_total: None,
         })
     })
     .await
     .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
     .map_err(AppError::Db)?;
+
     use std::sync::atomic::Ordering;
-    let is_syncing = state.cvelist_syncing.load(Ordering::Relaxed);
-    Ok(Json(json!(CvelistSyncState { is_syncing, ..st })))
+    st.is_syncing = state.cvelist_syncing.load(Ordering::Relaxed);
+
+    // Merge in live progress if a sync is running
+    if st.is_syncing {
+        if let Ok(p) = state.cvelist_progress.lock() {
+            if let Some(ref prog) = *p {
+                st.stage = Some(prog.stage.clone());
+                st.stage_message = Some(prog.message.clone());
+                st.files_done = Some(prog.files_done);
+                st.files_total = Some(prog.files_total);
+            }
+        }
+    }
+
+    Ok(Json(json!(st)))
 }
 
 // GET /api/cvelist  (list CVEs from cvelistV5)
@@ -70,8 +88,9 @@ pub async fn trigger_sync(_admin: RequireAdmin, State(state): State<AppState>) -
     let config = state.config.clone();
     let is_syncing = state.cvelist_syncing.clone();
     let cve_engine = state.cve_engine.clone();
+    let progress = state.cvelist_progress.clone();
     tokio::spawn(async move {
-        crate::cve::cvelist_scheduler::run(&db, &config, &is_syncing, &cve_engine).await;
+        crate::cve::cvelist_scheduler::run(&db, &config, &is_syncing, &cve_engine, &progress).await;
     });
     Ok(Json(json!({ "ok": true, "queued": true })))
 }

@@ -1,6 +1,20 @@
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
+// In-memory sync progress (polled via status endpoints)
+// ---------------------------------------------------------------------------
+
+/// Mutable progress state written during a sync, read by the status endpoint.
+/// Stored as Arc<Mutex<Option<SyncProgress>>> in AppState — None when idle.
+#[derive(Debug, Clone, Default)]
+pub struct SyncProgress {
+    pub stage: String,
+    pub message: String,
+    pub files_done: usize,
+    pub files_total: usize,
+}
+
+// ---------------------------------------------------------------------------
 // Auth types
 // ---------------------------------------------------------------------------
 
@@ -464,6 +478,15 @@ pub struct VulnrichmentSyncState {
     pub last_synced_at: Option<String>,
     pub is_syncing: bool,
     pub exploitation_breakdown: Vec<SsvcExploitationStat>,
+    // Live progress — only populated while is_syncing = true
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stage: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stage_message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub files_done: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub files_total: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -473,4 +496,13 @@ pub struct CvelistSyncState {
     pub last_synced_at: Option<String>,
     pub is_syncing: bool,
     pub last_repo_version: Option<String>,
+    // Live progress — only populated while is_syncing = true
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stage: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stage_message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub files_done: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub files_total: Option<usize>,
 }
