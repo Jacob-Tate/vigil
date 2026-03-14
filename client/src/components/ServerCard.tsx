@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { Server } from "../types";
@@ -23,6 +23,13 @@ export default function ServerCard({ server, onEdit, onDelete, onCheck }: Props)
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
+
+  useEffect(() => {
+    if (previewOpen) {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
+  }, [previewOpen]);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState<string | null>(null);
 

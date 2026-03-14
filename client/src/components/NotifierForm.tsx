@@ -18,6 +18,11 @@ export default function NotifierForm({ types, channel, onSave, onClose }: Props)
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
   // If types loaded after the form mounted (race condition), sync the selection
   useEffect(() => {
     if (!channel && selectedType === "" && types.length > 0) {
@@ -43,7 +48,7 @@ export default function NotifierForm({ types, channel, onSave, onClose }: Props)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
           <h2 className="font-semibold text-gray-900 dark:text-white">
             {channel ? "Edit Notification Channel" : "Add Notification Channel"}
