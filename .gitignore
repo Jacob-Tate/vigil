@@ -25,3 +25,6 @@ Thumbs.db
 data/
 recover.mjs
 vigil/target/
+
+sqlite3_*
+sqlite3.exe
