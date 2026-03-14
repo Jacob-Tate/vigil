@@ -93,13 +93,11 @@ async fn main() -> anyhow::Result<()> {
         nvd_status.clone(),
         cve_engine.clone(),
     );
-    // DISABLED: KEV scheduler sync is broken
-    // let kev_token = cve::kev_scheduler::start(
-    //     pool.clone(),
-    //     config_arc.clone(),
-    //     kev_syncing.clone(),
-    // );
-    let kev_token = CancellationToken::new();
+    let kev_token = cve::kev_scheduler::start(
+        pool.clone(),
+        config_arc.clone(),
+        kev_syncing.clone(),
+    );
 
     // DISABLED: Vulnrichment scheduler sync is broken
     // let vr_token = cve::vulnrichment_scheduler::start(

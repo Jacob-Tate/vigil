@@ -97,7 +97,7 @@ pub fn router(state: AppState) -> Router {
         // KEV
         .route("/api/kev", get(kev::list))
         .route("/api/kev/status", get(kev::status))
-        //.route("/api/kev/sync", post(kev::trigger_sync)) // DISABLED: sync broken
+        .route("/api/kev/sync", post(kev::trigger_sync))
         // Vulnrichment
         .route("/api/vulnrichment", get(vulnrichment::list))
         .route("/api/vulnrichment/status", get(vulnrichment::status))
