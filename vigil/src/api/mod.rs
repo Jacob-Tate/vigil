@@ -73,7 +73,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/ssl/checks/:targetId", get(ssl_checks::latest))
         // NVD sync & browse
         .route("/api/nvd/sync", post(nvd::trigger_sync))
-        .route("/api/nvd/sync/status", get(nvd::sync_status))
+        .route("/api/nvd/status", get(nvd::sync_status))
         .route("/api/nvd/browse/search", get(nvd::browse_search))
         .route("/api/nvd/browse/detail/:cveId", get(nvd::browse_detail))
         // CVE targets
@@ -97,15 +97,15 @@ pub fn router(state: AppState) -> Router {
         // KEV
         .route("/api/kev", get(kev::list))
         .route("/api/kev/status", get(kev::status))
-        .route("/api/kev/sync", post(kev::trigger_sync))
+        //.route("/api/kev/sync", post(kev::trigger_sync)) // DISABLED: sync broken
         // Vulnrichment
         .route("/api/vulnrichment", get(vulnrichment::list))
         .route("/api/vulnrichment/status", get(vulnrichment::status))
-        .route("/api/vulnrichment/sync", post(vulnrichment::trigger_sync))
+        //.route("/api/vulnrichment/sync", post(vulnrichment::trigger_sync)) // DISABLED: sync broken
         // CVEList
         .route("/api/cvelist", get(cvelist::list))
         .route("/api/cvelist/status", get(cvelist::status))
-        .route("/api/cvelist/sync", post(cvelist::trigger_sync))
+        //.route("/api/cvelist/sync", post(cvelist::trigger_sync)) // DISABLED: sync broken
         // Users (admin only — enforced per-handler)
         .route("/api/users", get(users::list).post(users::create))
         .route(
