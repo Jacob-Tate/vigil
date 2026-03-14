@@ -51,11 +51,12 @@ pub fn router(state: AppState) -> Router {
             "/api/notifications",
             get(notifications::list).post(notifications::create),
         )
+        .route("/api/notifications/types", get(notifications::list_types))
         .route(
             "/api/notifications/:id",
             put(notifications::update).delete(notifications::delete),
         )
-        .route("/api/notifications/test", post(notifications::test_send))
+        .route("/api/notifications/:id/test", post(notifications::test_send))
         // SSL targets
         .route(
             "/api/ssl/targets",

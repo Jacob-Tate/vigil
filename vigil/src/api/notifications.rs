@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use axum::{
     extract::{Path, State},
     Json,
@@ -7,10 +9,54 @@ use serde_json::{json, Value};
 
 use crate::{
     auth::middleware::{RequireAdmin, RequireAuth},
+    crypto,
     error::AppError,
+    notifiers,
     state::AppState,
-    types::NotificationChannel,
+    types::{AlertPayload, AlertType, NotificationChannel},
 };
+
+/// Returns the set of config keys that are passwords for a given notifier type.
+fn password_fields(ch_type: &str) -> &'static [&'static str] {
+    match ch_type {
+        "discord" => &["webhookUrl"],
+        "pushover" => &["appToken", "userKey"],
+        "teams" => &["webhookUrl"],
+        _ => &[],
+    }
+}
+
+/// Decrypts config_json and returns a redacted map suitable for the frontend
+/// (password fields are replaced with "••••••••", other fields passed through).
+fn redact_config(
+    ch_type: &str,
+    config_json: &str,
+    encryption_key: Option<&str>,
+) -> HashMap<String, Value> {
+    let decrypted = if let Some(key) = encryption_key {
+        crypto::decrypt_config(config_json, key).unwrap_or_default()
+    } else {
+        config_json.to_string()
+    };
+
+    let raw: HashMap<String, Value> = serde_json::from_str(&decrypted).unwrap_or_default();
+    let passwords = password_fields(ch_type);
+
+    raw.into_iter()
+        .map(|(k, v)| {
+            if passwords.contains(&k.as_str()) {
+                let redacted = if v.as_str().map_or(false, |s| !s.is_empty()) {
+                    "••••••••".into()
+                } else {
+                    Value::String(String::new())
+                };
+                (k, redacted)
+            } else {
+                (k, v)
+            }
+        })
+        .collect()
+}
 
 fn row_to_channel(row: &rusqlite::Row<'_>) -> rusqlite::Result<NotificationChannel> {
     Ok(NotificationChannel {
@@ -41,15 +87,17 @@ pub async fn list(
     .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
     .map_err(AppError::Db)?;
 
-    // Strip config_json from the list response (sensitive data)
+    let enc_key = state.config.notifications_encryption_key.as_deref();
     let safe: Vec<Value> = channels
         .into_iter()
         .map(|c| {
+            let config = redact_config(&c.channel_type, &c.config_json, enc_key);
             json!({
                 "id": c.id,
                 "type": c.channel_type,
                 "label": c.label,
-                "active": c.active
+                "active": c.active,
+                "config": config,
             })
         })
         .collect();
@@ -63,7 +111,7 @@ pub struct CreateChannel {
     channel_type: String,
     label: Option<String>,
     config: Value, // raw config object (not yet encrypted)
-    active: Option<i64>,
+    active: Option<bool>,
 }
 
 // POST /api/notifications
@@ -82,7 +130,7 @@ pub async fn create(
 
     let channel_type = body.channel_type.clone();
     let label = body.label.clone();
-    let active = body.active.unwrap_or(1);
+    let active = if body.active.unwrap_or(true) { 1i64 } else { 0i64 };
     let db = state.db.clone();
 
     let id: i64 = tokio::task::spawn_blocking(move || {
@@ -104,7 +152,7 @@ pub async fn create(
 pub struct UpdateChannel {
     label: Option<String>,
     config: Option<Value>,
-    active: Option<i64>,
+    active: Option<bool>,
 }
 
 // PUT /api/notifications/:id
@@ -142,7 +190,7 @@ pub async fn update(
         }
         if let Some(v) = body.active {
             parts.push("active = ?".into());
-            params.push(Value::Integer(v));
+            params.push(Value::Integer(if v { 1 } else { 0 }));
         }
 
         if parts.is_empty() {
@@ -188,12 +236,116 @@ pub async fn delete(
     Ok(Json(json!({ "ok": true })))
 }
 
-// POST /api/notifications/test  — send a test alert
+// GET /api/notifications/types
+pub async fn list_types(_auth: RequireAuth) -> Json<Value> {
+    Json(json!([
+        {
+            "type": "discord",
+            "displayName": "Discord",
+            "configSchema": {
+                "webhookUrl": {
+                    "label": "Webhook URL",
+                    "type": "password",
+                    "required": true,
+                    "placeholder": "https://discord.com/api/webhooks/..."
+                }
+            }
+        },
+        {
+            "type": "pushover",
+            "displayName": "Pushover",
+            "configSchema": {
+                "appToken": {
+                    "label": "App Token",
+                    "type": "password",
+                    "required": true,
+                    "placeholder": "Pushover application token"
+                },
+                "userKey": {
+                    "label": "User Key",
+                    "type": "password",
+                    "required": true,
+                    "placeholder": "Pushover user key"
+                }
+            }
+        },
+        {
+            "type": "teams",
+            "displayName": "Microsoft Teams",
+            "configSchema": {
+                "webhookUrl": {
+                    "label": "Webhook URL",
+                    "type": "password",
+                    "required": true,
+                    "placeholder": "https://outlook.office.com/webhook/..."
+                }
+            }
+        }
+    ]))
+}
+
+// POST /api/notifications/:id/test
 pub async fn test_send(
     _admin: RequireAdmin,
-    State(_state): State<AppState>,
-    Json(_body): Json<Value>,
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
 ) -> Result<Json<Value>, AppError> {
-    // Notifier integration added in Phase 4
+    let db = state.db.clone();
+    let row: Option<(String, String)> = tokio::task::spawn_blocking(move || {
+        let conn = db.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT type, config_json FROM notification_channels WHERE id = ?1",
+        )?;
+        let mut rows = stmt.query_map(rusqlite::params![id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+        Ok::<_, rusqlite::Error>(rows.next().and_then(|r| r.ok()))
+    })
+    .await
+    .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Db)?;
+
+    let (ch_type, config_json) = row
+        .ok_or_else(|| AppError::NotFound(format!("Notification channel {} not found", id)))?;
+
+    let decrypted = if let Some(ref key) = state.config.notifications_encryption_key {
+        crypto::decrypt_config(&config_json, key).map_err(|e| AppError::Internal(e.to_string()))?
+    } else {
+        config_json
+    };
+
+    let cfg: HashMap<String, Value> =
+        serde_json::from_str(&decrypted).map_err(|e| AppError::Internal(e.to_string()))?;
+
+    let payload = AlertPayload {
+        server_name: "Test Server".into(),
+        url: "https://example.com".into(),
+        alert_type: AlertType::Down,
+        status_code: Some(503),
+        response_time_ms: None,
+        threshold: None,
+        diff_id: None,
+        diff_view_url: None,
+        detected_at: chrono::Utc::now().to_rfc3339(),
+        message: "This is a test alert from Vigil.".into(),
+        ssl_days_remaining: None,
+        ssl_fingerprint: None,
+        ssl_subject: None,
+        cve_id: None,
+        cvss_score: None,
+        cvss_severity: None,
+        cve_digest: None,
+        previous_exploitation: None,
+        changed_fields: None,
+    };
+
+    let result = match ch_type.as_str() {
+        "discord" => notifiers::discord::send(&cfg, &payload).await,
+        "pushover" => notifiers::pushover::send(&cfg, &payload).await,
+        "teams" => notifiers::teams::send(&cfg, &payload).await,
+        other => return Err(AppError::Internal(format!("Unknown notifier type: {}", other))),
+    };
+
+    result.map_err(|e| AppError::Internal(format!("Test alert failed: {}", e)))?;
     Ok(Json(json!({ "ok": true })))
 }
