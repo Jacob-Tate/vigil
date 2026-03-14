@@ -7,6 +7,20 @@ use crate::{config::Config, db::DbPool, types::NvdSyncStatus};
 
 use super::{engine::CveEngine, enrichment_alerter::check_enrichment_alerts, nvd_importer};
 
+/// Returns true if the nvd_feed_state table has no rows (fresh DB).
+async fn is_fresh_db(db: &DbPool) -> bool {
+    let db = db.clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.lock().unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM nvd_feed_state", [], |r| r.get(0))
+            .unwrap_or(0);
+        count == 0
+    })
+    .await
+    .unwrap_or(false)
+}
+
 /// Spawn the NVD scheduled sync task. Returns a token you can cancel to stop it.
 pub fn start(
     db: DbPool,
@@ -20,8 +34,17 @@ pub fn start(
     let interval = std::time::Duration::from_secs(interval_hours * 3600);
 
     tokio::spawn(async move {
+        // On a fresh DB, do a full import before entering the scheduled update loop.
+        if is_fresh_db(&db).await {
+            tracing::info!("[nvd-scheduler] fresh DB detected — running initial full import");
+            run_full_import(db.clone(), config.clone(), status.clone(), cve_engine.clone()).await;
+        }
+
         let mut ticker = tokio::time::interval(interval);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        // Consume the first (immediate) tick so we don't double-run right after a full import.
+        ticker.tick().await;
+
         loop {
             tokio::select! {
                 _ = ticker.tick() => {
