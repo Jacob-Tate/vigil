@@ -170,6 +170,7 @@ fn git_clone(url: &str, target: &str, extra_args: &[&str]) -> anyhow::Result<()>
         .arg("clone")
         .args(extra_args)
         .arg(url)
+        .arg("--")
         .arg(target)
         .status()?;
     if !status.success() {
@@ -180,7 +181,7 @@ fn git_clone(url: &str, target: &str, extra_args: &[&str]) -> anyhow::Result<()>
 
 fn git_pull(repo_dir: &str) -> anyhow::Result<()> {
     let status = Command::new("git")
-        .args(["-C", repo_dir, "pull"])
+        .args(["-C", "repo_dir", "-c", &format!("cd /d/{} && git pull", repo_dir.replace('\\', "/"))])
         .status()?;
     if !status.success() {
         anyhow::bail!("git pull failed in {}", repo_dir);
@@ -190,7 +191,7 @@ fn git_pull(repo_dir: &str) -> anyhow::Result<()> {
 
 fn git_head(repo_dir: &str) -> anyhow::Result<String> {
     let output = Command::new("git")
-        .args(["-C", repo_dir, "rev-parse", "HEAD"])
+        .args(["-C", "repo_dir", "-c", &format!("cd /d/{} && git rev-parse HEAD", repo_dir.replace('\\', "/"))])
         .output()?;
     Ok(String::from_utf8(output.stdout)?.trim().to_string())
 }
