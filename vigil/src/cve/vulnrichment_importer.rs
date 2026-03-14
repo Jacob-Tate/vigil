@@ -37,12 +37,12 @@ pub async fn sync_vulnrichment(db: &DbPool, data_dir: &str) -> anyhow::Result<Vu
         let json_files = walk_json_files(&repo_dir);
         let synced_at = chrono::Utc::now().to_rfc3339();
 
-        let conn = db.lock().unwrap();
         let mut count = 0usize;
         let mut batch: Vec<(String, Option<String>, Option<String>, Option<String>, Option<String>)> = Vec::new();
 
-        let flush = |batch: &mut Vec<_>, conn: &rusqlite::Connection, synced_at: &str| -> anyhow::Result<()> {
+        let flush = |batch: &mut Vec<_>, synced_at: &str| -> anyhow::Result<()> {
             if batch.is_empty() { return Ok(()); }
+            let conn = db.lock().unwrap();
             conn.execute_batch("BEGIN IMMEDIATE")?;
             let result: rusqlite::Result<()> = (|| {
                 let mut stmt = conn.prepare_cached(
@@ -91,12 +91,12 @@ pub async fn sync_vulnrichment(db: &DbPool, data_dir: &str) -> anyhow::Result<Vu
 
             if batch.len() >= BATCH_SIZE {
                 count += batch.len();
-                flush(&mut batch, &conn, &synced_at)?;
+                flush(&mut batch, &synced_at)?;
             }
         }
 
         count += batch.len();
-        flush(&mut batch, &conn, &synced_at)?;
+        flush(&mut batch, &synced_at)?;
 
         tracing::info!(count, "[vulnrichment] upserted SSVC entries");
         Ok(VulnrichmentSyncResult { count, repo_version })
@@ -170,8 +170,8 @@ fn git_clone(url: &str, target: &str, extra_args: &[&str]) -> anyhow::Result<()>
         .arg("clone")
         .args(extra_args)
         .arg(url)
-        .arg("--")
         .arg(target)
+        .env("GIT_TERMINAL_PROMPT", "0")
         .status()?;
     if !status.success() {
         anyhow::bail!("git clone failed for {}", url);
@@ -181,7 +181,9 @@ fn git_clone(url: &str, target: &str, extra_args: &[&str]) -> anyhow::Result<()>
 
 fn git_pull(repo_dir: &str) -> anyhow::Result<()> {
     let status = Command::new("git")
-        .args(["-C", "repo_dir", "-c", &format!("cd /d/{} && git pull", repo_dir.replace('\\', "/"))])
+        .args(["pull"])
+        .current_dir(repo_dir)
+        .env("GIT_TERMINAL_PROMPT", "0")
         .status()?;
     if !status.success() {
         anyhow::bail!("git pull failed in {}", repo_dir);
@@ -191,7 +193,9 @@ fn git_pull(repo_dir: &str) -> anyhow::Result<()> {
 
 fn git_head(repo_dir: &str) -> anyhow::Result<String> {
     let output = Command::new("git")
-        .args(["-C", "repo_dir", "-c", &format!("cd /d/{} && git rev-parse HEAD", repo_dir.replace('\\', "/"))])
+        .args(["rev-parse", "HEAD"])
+        .current_dir(repo_dir)
+        .env("GIT_TERMINAL_PROMPT", "0")
         .output()?;
     Ok(String::from_utf8(output.stdout)?.trim().to_string())
 }
