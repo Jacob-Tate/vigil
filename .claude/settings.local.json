@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(powershell -Command \"Set-Location ''c:\\\\Users\\\\jacob\\\\source\\\\monitor\\\\vigil''; cargo build 2>&1\")",
+      "Bash(cargo build:*)"
     ]
   }
 }

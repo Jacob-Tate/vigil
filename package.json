@@ -3,9 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "build": "npm run build --prefix client && npm run build --prefix server",
-    "start": "node server/dist/index.js",
+    "dev": "concurrently \"npm run dev:rust\" \"npm run dev --prefix client\"",
+    "dev:node": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:rust": "cargo run --manifest-path vigil/Cargo.toml",
+    "build": "npm run build:rust && npm run build --prefix client",
+    "build:node": "npm run build --prefix client && npm run build --prefix server",
+    "build:rust": "cargo build --release --manifest-path vigil/Cargo.toml",
+    "start": "vigil/target/release/vigil",
+    "start:node": "node server/dist/index.js",
     "typecheck": "npm run typecheck --prefix server && npm run typecheck --prefix client",
     "lint": "npm run lint --prefix server && npm run lint --prefix client",
     "install:all": "npm install && npm install --prefix server && npm install --prefix client"
