@@ -62,6 +62,11 @@ export default function CveDetailModal({ cveId, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     setLoading(true);
     getNvdCve(cveId)
