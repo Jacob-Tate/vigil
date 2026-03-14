@@ -137,6 +137,31 @@ pub async fn update(
         let mut parts: Vec<String> = Vec::new();
         let mut params: Vec<Value> = Vec::new();
 
+        // Guard: cannot demote the last admin
+        if let Some(ref new_role) = body.role {
+            if new_role != "admin" {
+                let current_role: Option<String> = conn
+                    .query_row(
+                        "SELECT role FROM users WHERE id = ?1",
+                        rusqlite::params![id],
+                        |row| row.get(0),
+                    )
+                    .optional()?;
+                if current_role.as_deref() == Some("admin") {
+                    let admin_count: i64 = conn.query_row(
+                        "SELECT COUNT(*) FROM users WHERE role = 'admin'",
+                        [],
+                        |row| row.get(0),
+                    )?;
+                    if admin_count <= 1 {
+                        return Err(rusqlite::Error::ToSqlConversionFailure(Box::new(
+                            std::io::Error::new(std::io::ErrorKind::Other, "last_admin"),
+                        )));
+                    }
+                }
+            }
+        }
+
         if let Some(v) = body.username { parts.push("username = ?".into()); params.push(Value::Text(v)); }
         if let Some(v) = body.role { parts.push("role = ?".into()); params.push(Value::Text(v)); }
 
@@ -149,7 +174,13 @@ pub async fn update(
     })
     .await
     .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
-    .map_err(AppError::Db)?;
+    .map_err(|e| {
+        if e.to_string().contains("last_admin") {
+            AppError::BadRequest("Cannot demote the last admin".into())
+        } else {
+            AppError::Db(e)
+        }
+    })?;
 
     if changes == 0 {
         return Err(AppError::NotFound(format!("User {} not found", id)));
@@ -180,11 +211,39 @@ pub async fn delete(
     let db = state.db.clone();
     let changes = tokio::task::spawn_blocking(move || {
         let conn = db.lock().unwrap();
+
+        // Guard: cannot delete the last admin
+        let current_role: Option<String> = conn
+            .query_row(
+                "SELECT role FROM users WHERE id = ?1",
+                rusqlite::params![id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if current_role.as_deref() == Some("admin") {
+            let admin_count: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM users WHERE role = 'admin'",
+                [],
+                |row| row.get(0),
+            )?;
+            if admin_count <= 1 {
+                return Err(rusqlite::Error::ToSqlConversionFailure(Box::new(
+                    std::io::Error::new(std::io::ErrorKind::Other, "last_admin"),
+                )));
+            }
+        }
+
         conn.execute("DELETE FROM users WHERE id = ?1", rusqlite::params![id])
     })
     .await
     .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
-    .map_err(AppError::Db)?;
+    .map_err(|e| {
+        if e.to_string().contains("last_admin") {
+            AppError::BadRequest("Cannot delete the last admin".into())
+        } else {
+            AppError::Db(e)
+        }
+    })?;
 
     if changes == 0 {
         return Err(AppError::NotFound(format!("User {} not found", id)));
