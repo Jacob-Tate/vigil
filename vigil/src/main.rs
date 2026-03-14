@@ -98,14 +98,11 @@ async fn main() -> anyhow::Result<()> {
         config_arc.clone(),
         kev_syncing.clone(),
     );
-
-    // DISABLED: Vulnrichment scheduler sync is broken
-    // let vr_token = cve::vulnrichment_scheduler::start(
-    //     pool.clone(),
-    //     config_arc.clone(),
-    //     vulnrichment_syncing.clone(),
-    // );
-    let vr_token = CancellationToken::new();
+    let vr_token = cve::vulnrichment_scheduler::start(
+        pool.clone(),
+        config_arc.clone(),
+        vulnrichment_syncing.clone(),
+    );
 
     // DISABLED: CVEList scheduler sync is broken
     // let cvelist_token = cve::cvelist_scheduler::start(

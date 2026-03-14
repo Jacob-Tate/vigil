@@ -101,7 +101,7 @@ pub fn router(state: AppState) -> Router {
         // Vulnrichment
         .route("/api/vulnrichment", get(vulnrichment::list))
         .route("/api/vulnrichment/status", get(vulnrichment::status))
-        //.route("/api/vulnrichment/sync", post(vulnrichment::trigger_sync)) // DISABLED: sync broken
+        .route("/api/vulnrichment/sync", post(vulnrichment::trigger_sync))
         // CVEList
         .route("/api/cvelist", get(cvelist::list))
         .route("/api/cvelist/status", get(cvelist::status))
