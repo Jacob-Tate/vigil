@@ -42,6 +42,7 @@ impl FromRequestParts<AppState> for RequireAuth {
 /// Axum extractor that requires the authenticated user to be an admin.
 /// On success, yields the `AuthUser`.
 /// On failure, short-circuits with 401 (no cookie) or 403 (wrong role).
+#[allow(dead_code)]
 pub struct RequireAdmin(pub AuthUser);
 
 #[async_trait]

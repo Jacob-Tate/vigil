@@ -12,7 +12,6 @@ pub struct CheckResult {
     pub response_time_ms: i64,
     pub is_up: bool,
     pub raw_html: String,
-    pub error: Option<String>,
 }
 
 static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
@@ -32,14 +31,13 @@ pub async fn check_server(url: &str, response_time_threshold_ms: i64) -> CheckRe
             let status_code = resp.status().as_u16() as i64;
             let raw_html = match resp.text().await {
                 Ok(t) => t,
-                Err(e) => {
+                Err(_) => {
                     let response_time_ms = start.elapsed().as_millis() as i64;
                     return CheckResult {
                         status_code: Some(status_code),
                         response_time_ms,
                         is_up: false,
                         raw_html: String::new(),
-                        error: Some(e.to_string()),
                     };
                 }
             };
@@ -54,17 +52,15 @@ pub async fn check_server(url: &str, response_time_threshold_ms: i64) -> CheckRe
                 response_time_ms,
                 is_up,
                 raw_html,
-                error: None,
             }
         }
-        Err(e) => {
+        Err(_) => {
             let response_time_ms = start.elapsed().as_millis() as i64;
             CheckResult {
                 status_code: None,
                 response_time_ms,
                 is_up: false,
                 raw_html: String::new(),
-                error: Some(e.to_string()),
             }
         }
     }

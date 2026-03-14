@@ -18,33 +18,6 @@ pub struct SyncProgress {
 // Auth types
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum UserRole {
-    Admin,
-    Viewer,
-}
-
-impl std::fmt::Display for UserRole {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            UserRole::Admin => write!(f, "admin"),
-            UserRole::Viewer => write!(f, "viewer"),
-        }
-    }
-}
-
-impl std::str::FromStr for UserRole {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "admin" => Ok(UserRole::Admin),
-            "viewer" => Ok(UserRole::Viewer),
-            _ => Err(format!("unknown role: {}", s)),
-        }
-    }
-}
-
 /// Full user row as stored in the database.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -96,15 +69,6 @@ pub struct Check {
     pub diff_id: Option<i64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContentDiff {
-    pub id: i64,
-    pub server_id: i64,
-    pub detected_at: String,
-    pub old_hash: Option<String>,
-    pub new_hash: Option<String>,
-    pub diff_file: String,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerWithStatus {

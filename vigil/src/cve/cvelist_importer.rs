@@ -13,7 +13,6 @@ const BATCH_SIZE: usize = 500;
 
 pub struct CvelistSyncResult {
     pub count: usize,
-    pub repo_version: String,
 }
 
 struct CvelistRow {
@@ -77,7 +76,7 @@ pub async fn sync_cvelist(
         if let Some(ref last) = last_hash {
             if !last.is_empty() && *last == repo_version {
                 tracing::info!("[cvelist] already up to date, nothing to process");
-                return Ok(CvelistSyncResult { count: 0, repo_version });
+                return Ok(CvelistSyncResult { count: 0 });
             }
         }
 
@@ -190,7 +189,7 @@ pub async fn sync_cvelist(
         }
 
         tracing::info!(count, "[cvelist] upserted CVE records");
-        Ok(CvelistSyncResult { count, repo_version })
+        Ok(CvelistSyncResult { count })
     })
     .await?
 }

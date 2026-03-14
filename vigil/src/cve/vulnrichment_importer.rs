@@ -14,7 +14,6 @@ const BATCH_SIZE: usize = 500;
 
 pub struct VulnrichmentSyncResult {
     pub count: usize,
-    pub repo_version: String,
 }
 
 pub async fn sync_vulnrichment(
@@ -43,8 +42,6 @@ pub async fn sync_vulnrichment(
             set_progress("git_clone", "Cloning CISA Vulnrichment repository…".to_string(), 0, 0);
             git_clone(REPO_URL, &repo_dir_str, &["--depth", "1"])?;
         }
-
-        let repo_version = git_head(&repo_dir_str).unwrap_or_default();
 
         // Walk all JSON files
         let json_files = walk_json_files(&repo_dir);
@@ -103,7 +100,7 @@ pub async fn sync_vulnrichment(
         flush(&mut batch, &synced_at)?;
 
         tracing::info!(count, "[vulnrichment] upserted SSVC entries");
-        Ok(VulnrichmentSyncResult { count, repo_version })
+        Ok(VulnrichmentSyncResult { count })
     })
     .await?
 }
@@ -174,10 +171,3 @@ fn git_pull(repo_dir: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn git_head(repo_dir: &str) -> anyhow::Result<String> {
-    let output = Command::new("git")
-        .args(["rev-parse", "HEAD"]).current_dir(repo_dir)
-        .env("GIT_TERMINAL_PROMPT", "0")
-        .output()?;
-    Ok(String::from_utf8(output.stdout)?.trim().to_string())
-}

@@ -7,10 +7,6 @@ const KEV_URL: &str =
 
 #[derive(Deserialize)]
 struct KevFeed {
-    #[serde(rename = "catalogVersion")]
-    catalog_version: Option<String>,
-    #[serde(rename = "dateReleased")]
-    date_released: Option<String>,
     vulnerabilities: Vec<KevVuln>,
 }
 
@@ -38,8 +34,6 @@ struct KevVuln {
 
 pub struct KevSyncResult {
     pub count: usize,
-    pub catalog_version: String,
-    pub date_released: String,
 }
 
 pub async fn sync_kev(db: &DbPool) -> anyhow::Result<KevSyncResult> {
@@ -56,8 +50,6 @@ pub async fn sync_kev(db: &DbPool) -> anyhow::Result<KevSyncResult> {
         .await?;
 
     let vulns = feed.vulnerabilities;
-    let catalog_version = feed.catalog_version.unwrap_or_default();
-    let date_released = feed.date_released.unwrap_or_default();
     let count = vulns.len();
     let synced_at = chrono::Utc::now().to_rfc3339();
 
@@ -102,5 +94,5 @@ pub async fn sync_kev(db: &DbPool) -> anyhow::Result<KevSyncResult> {
     .await??;
 
     tracing::info!(count, "CISA KEV sync complete");
-    Ok(KevSyncResult { count, catalog_version, date_released })
+    Ok(KevSyncResult { count })
 }
