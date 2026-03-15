@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     chromium \
     fonts-liberation \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=server-build /build/vigil/target/release/vigil ./vigil
