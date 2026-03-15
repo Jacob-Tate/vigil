@@ -99,7 +99,7 @@ export default function ServerDetail() {
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
           <p className="text-xs text-gray-400 dark:text-gray-500">Avg response</p>
           <p className="text-xl font-bold text-gray-900 dark:text-white">
-            {stats?.avg_response_time_ms != null ? `${stats.avg_response_time_ms}ms` : "—"}
+            {stats?.avg_response_time_ms != null ? `${Math.round(stats.avg_response_time_ms)}ms` : "—"}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
