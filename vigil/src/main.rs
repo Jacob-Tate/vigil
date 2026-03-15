@@ -2,6 +2,7 @@ use std::sync::{atomic::AtomicBool, Arc, Mutex};
 
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
+use tower_http::services::{ServeDir, ServeFile};
 
 mod api;
 mod auth;
@@ -155,7 +156,18 @@ async fn main() -> anyhow::Result<()> {
         ])
         .allow_credentials(true);
 
-    let app = api::router(state.clone()).layer(cors);
+    // Serve the built React client from STATIC_DIR (defaults to "client/dist").
+    // In dev the directory won't exist and non-API routes return 404 — that's fine
+    // because Vite handles the frontend. In production (Docker) the built client
+    // is copied to client/dist next to the binary.
+    let static_dir =
+        std::env::var("STATIC_DIR").unwrap_or_else(|_| "client/dist".to_string());
+    let serve_dir = ServeDir::new(&static_dir)
+        .not_found_service(ServeFile::new(format!("{}/index.html", static_dir)));
+
+    let app = api::router(state.clone())
+        .fallback_service(serve_dir)
+        .layer(cors);
 
     let addr = format!("0.0.0.0:{}", config.port);
     tracing::info!("Vigil server listening on http://{}", addr);
