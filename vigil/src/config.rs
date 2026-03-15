@@ -50,10 +50,12 @@ impl Config {
 
         let notifications_encryption_key = env::var("NOTIFICATIONS_ENCRYPTION_KEY").ok();
         if notifications_encryption_key.is_none() {
-            tracing::warn!(
-                "[config] WARNING: NOTIFICATIONS_ENCRYPTION_KEY is not set — \
-                 notification credentials will be stored in plaintext"
-            );
+            let msg = "NOTIFICATIONS_ENCRYPTION_KEY is not set — \
+                       notification credentials will be stored in plaintext";
+            if is_production {
+                return Err(msg.to_string());
+            }
+            tracing::warn!("[config] WARNING: {}", msg);
         }
 
         let client_origin =
