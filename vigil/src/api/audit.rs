@@ -62,8 +62,8 @@ fn extract_username(headers: &axum::http::HeaderMap) -> String {
         let token = cookie_header
             .split(';')
             .map(|s| s.trim())
-            .find(|s| s.starts_with("auth_token="))?
-            .strip_prefix("auth_token=")?;
+            .find(|s| s.starts_with("token="))?
+            .strip_prefix("token=")?;
 
         // JWT structure: <header>.<payload>.<signature>
         // We only need the payload (index 1)
