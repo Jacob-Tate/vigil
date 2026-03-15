@@ -120,26 +120,36 @@ pub async fn browse_search(
             format!("WHERE {}", conditions.join(" AND "))
         };
 
+        // Union NVD CVEs with cvelist-only CVEs (e.g. brand-new CVEs not yet in NVD)
+        let base_cte = "WITH all_cves AS (\
+            SELECT cve_id, published_at, last_modified_at, cvss_score, cvss_severity, description, nvd_url \
+            FROM nvd_cves \
+            UNION ALL \
+            SELECT cve_id, date_published, date_updated, NULL, NULL, cna_description, NULL \
+            FROM cvelist_cves \
+            WHERE cve_id NOT IN (SELECT cve_id FROM nvd_cves)\
+        ) ";
+
         let count_sql = format!(
-            "SELECT COUNT(*) FROM nvd_cves n LEFT JOIN cisa_kev k ON n.cve_id = k.cve_id {}",
-            where_clause
+            "{}SELECT COUNT(*) FROM all_cves n LEFT JOIN cisa_kev k ON n.cve_id = k.cve_id {}",
+            base_cte, where_clause
         );
         let count_refs: Vec<&dyn rusqlite::ToSql> =
             filter_params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
         let total: i64 = conn.query_row(&count_sql, count_refs.as_slice(), |r| r.get(0))?;
 
         let data_sql = format!(
-            "SELECT n.cve_id, n.published_at, n.last_modified_at, n.cvss_score, n.cvss_severity, \
+            "{}SELECT n.cve_id, n.published_at, n.last_modified_at, n.cvss_score, n.cvss_severity, \
              n.description, n.nvd_url, \
              CASE WHEN k.cve_id IS NOT NULL THEN 1 ELSE 0 END as is_kev, \
              s.exploitation as ssvc_exploitation, \
              cv.state as cvelist_state \
-             FROM nvd_cves n \
+             FROM all_cves n \
              LEFT JOIN cisa_kev k ON n.cve_id = k.cve_id \
              LEFT JOIN cisa_ssvc s ON n.cve_id = s.cve_id \
              LEFT JOIN cvelist_cves cv ON n.cve_id = cv.cve_id \
              {} ORDER BY n.published_at DESC LIMIT ? OFFSET ?",
-            where_clause
+            base_cte, where_clause
         );
         let mut data_params = filter_params;
         data_params.push(SqlVal::Integer(limit));
@@ -206,8 +216,24 @@ pub async fn browse_detail(
             )
             .optional()?;
 
-        let Some((cid, pub_at, mod_at, cvss, severity, desc, url, refs_json)) = base else {
-            return Ok::<_, rusqlite::Error>(None);
+        // Fall back to cvelist data for CVEs not yet in NVD
+        let (cid, pub_at, mod_at, cvss, severity, desc, url, refs_json) = match base {
+            Some(row) => row,
+            None => {
+                use rusqlite::OptionalExtension;
+                let cl: Option<(String, Option<String>, Option<String>, Option<String>)> = conn
+                    .query_row(
+                        "SELECT cve_id, date_published, date_updated, cna_description \
+                         FROM cvelist_cves WHERE cve_id = ?1",
+                        rusqlite::params![cve_id],
+                        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+                    )
+                    .optional()?;
+                let Some((cid, pub_at, mod_at, desc)) = cl else {
+                    return Ok::<_, rusqlite::Error>(None);
+                };
+                (cid, pub_at, mod_at, None, None, desc, None, None)
+            }
         };
 
         let cpe_entries: Vec<NvdCpeEntry> = conn
