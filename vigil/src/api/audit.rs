@@ -25,14 +25,29 @@ pub async fn audit_log(req: Request, next: Next) -> Response {
     let elapsed_ms = start.elapsed().as_millis() as u64;
     let status = response.status().as_u16();
 
-    tracing::info!(
-        method = method,
-        path = path,
-        status = status,
-        elapsed_ms = elapsed_ms,
-        user = user,
-        "request"
-    );
+    let is_noisy = path.ends_with("/status")
+        || path.ends_with("/health")
+        || path == "/api/health";
+
+    if is_noisy {
+        tracing::debug!(
+            method = method,
+            path = path,
+            status = status,
+            elapsed_ms = elapsed_ms,
+            user = user,
+            "request"
+        );
+    } else {
+        tracing::info!(
+            method = method,
+            path = path,
+            status = status,
+            elapsed_ms = elapsed_ms,
+            user = user,
+            "request"
+        );
+    }
 
     response
 }
