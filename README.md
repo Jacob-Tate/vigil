@@ -18,17 +18,16 @@ A self-hosted monitoring platform. Tracks HTTP uptime, SSL certificate health, a
 
 ## Prerequisites
 
-- Node.js 22+
-- npm 9+
+- Rust (stable toolchain)
+- Node.js 22+ / npm 9+ (frontend only)
 
 ## Quick Start
 
 ```bash
 git clone <repo>
 cd monitor
-npm run install:all
-cp server/.env.example server/.env
-# Edit server/.env — set JWT_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD at minimum
+cp vigil/.env.example vigil/.env
+# Edit vigil/.env — set JWT_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD at minimum
 npm run dev
 ```
 
@@ -39,13 +38,13 @@ On first start the server seeds an admin account from `ADMIN_USERNAME` / `ADMIN_
 
 ## Environment Variables
 
-Create `server/.env` from `server/.env.example`:
+Create `vigil/.env` from `vigil/.env.example`:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `3001` | Express server port |
+| `PORT` | `3001` | Server port |
 | `JWT_SECRET` | — | **Required in production** — secret used to sign JWT session tokens |
-| `NOTIFICATIONS_ENCRYPTION_KEY` | — | **Strongly recommended** — AES-256-GCM key for encrypting notification credentials (webhook URLs, API keys) at rest. Must be a securely generated random value: `openssl rand -hex 32`. Without it, credentials are stored in plaintext. |
+| `NOTIFICATIONS_ENCRYPTION_KEY` | — | **Strongly recommended** — AES-256-GCM key for encrypting notification credentials at rest. Generate with: `openssl rand -hex 32` |
 | `ADMIN_USERNAME` | — | First-boot admin username (seeded once if no users exist) |
 | `ADMIN_PASSWORD` | — | First-boot admin password |
 | `SESSION_DURATION_HOURS` | `24` | Cookie/token lifetime in hours |
@@ -54,34 +53,35 @@ Create `server/.env` from `server/.env.example`:
 | `ALERT_COOLDOWN_SECONDS` | `3600` | Seconds between repeat alerts for the same target |
 | `NVD_SYNC_INTERVAL_HOURS` | `2` | How often the NVD feed is refreshed |
 | `DIFF_RETENTION_DAYS` | `30` | Days to keep content diff files on disk |
-| `DATA_DIR` | `data` | Path for SQLite DB, snapshots, and diffs (relative to `server/`) |
+| `DATA_DIR` | `data` | Path for SQLite DB, snapshots, and diffs |
 | `BROWSER_EXECUTABLE_PATH` | — | Optional path to Chrome/Chromium for screenshot-based checks |
-| `NODE_ENV` | `development` | Set to `production` to enable secure cookies |
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start server (port 3001) and client (port 5173) in watch mode |
-| `npm run build` | Build client and server for production |
-| `npm start` | Run production build (`node server/dist/index.js`) |
-| `npm run typecheck` | Run `tsc --noEmit` for both workspaces |
-| `npm run lint` | Run ESLint for both workspaces |
-| `npm run install:all` | Install all workspace dependencies |
+| `npm run dev` | Start Rust server (port 3001) and client (port 5173) in watch mode |
+| `npm run build` | Build Rust server and client for production |
+| `npm start` | Run production build (`vigil/target/release/vigil`) |
+| `npm run typecheck` | Run `tsc --noEmit` for the client |
+| `npm run lint` | Run ESLint for the client |
+| `npm install --prefix client` | Install frontend dependencies |
 
 ## Architecture
 
 ```
 monitor/
-├── server/          Node.js + Express API + background monitor engines
+├── vigil/           Rust + Axum API + background monitor engines
 │   └── src/
 │       ├── api/         REST endpoints (auth, servers, ssl, cve, users, …)
-│       ├── auth/        Admin user seeding
-│       ├── cve/         CVE check engine + NVD feed scheduler
-│       ├── db/          SQLite schema + connection helpers
-│       ├── middleware/  requireAuth / requireAdmin middleware
+│       ├── auth/        JWT middleware + admin user seeding
+│       ├── config.rs    Environment config
+│       ├── cve/         CVE check engine + NVD/KEV/cvelist schedulers
+│       ├── db/          SQLite schema + connection pool
 │       ├── monitor/     HTTP check scheduler, checker, hasher, differ, alerter
-│       └── notifiers/   Discord, Pushover, Teams (pluggable INotifier interface)
+│       ├── notifiers/   Discord, Pushover, Teams (pluggable trait)
+│       ├── ssl/         SSL check engine + alerter
+│       └── types.rs     Shared types
 └── client/          React + Vite + Tailwind
     └── src/
         ├── api/         Typed fetch wrapper (credentials: include on all requests)
@@ -98,19 +98,19 @@ All API routes require a valid session cookie except `/api/auth/*` and `/api/hea
 - **Admin** — full read and write access; can manage users, targets, and notifications
 - **Viewer** — read-only access; write buttons are hidden in the UI and blocked at the API level
 
-Passwords are hashed with bcrypt (cost factor 12). Sessions are httpOnly cookies signed with `JWT_SECRET`.
+Passwords are hashed with bcrypt. Sessions are httpOnly cookies signed with `JWT_SECRET`.
 
 ## Adding a New Notifier
 
-1. Create `server/src/notifiers/<name>.ts` implementing the `INotifier` interface
-2. Register it in `server/src/notifiers/index.ts` in the `NOTIFIER_MAP`
+1. Create `vigil/src/notifiers/<name>.rs` implementing the notifier trait
+2. Register it in `vigil/src/notifiers/mod.rs`
 
-The UI dynamically renders config fields from `configSchema` — no frontend changes needed.
+The UI dynamically renders config fields from the notifier's config schema — no frontend changes needed.
 
 ## Data Storage
 
-- `server/data/monitor.db` — SQLite database (metadata only)
-- `server/data/snapshots/{serverId}.html` — current baseline HTML per server
-- `server/data/diffs/{diffId}-{timestamp}.html` — immutable diff file per change event
-- `server/data/nvd/` — local NVD mirror (JSON feeds)
+- `data/monitor.db` — SQLite database (metadata only)
+- `data/snapshots/{serverId}.html` — current baseline HTML per server
+- `data/diffs/{diffId}-{timestamp}.html` — immutable diff file per change event
+- `data/nvd/` — local NVD mirror (JSON feeds)
 - Diffs older than `DIFF_RETENTION_DAYS` are automatically cleaned up on startup

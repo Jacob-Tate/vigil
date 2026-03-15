@@ -2,51 +2,57 @@
 
 ## Project Overview
 
-Full-stack TypeScript server monitoring platform ("Vigil"). Express backend + React/Tailwind frontend. See README.md for full feature list.
+Full-stack server monitoring platform ("Vigil"). Rust/Axum backend + React/Tailwind frontend. See README.md for full feature list.
 
 ## Structure
 
 ```
-server/src/         Express API + monitor engines (TypeScript, CommonJS)
+vigil/src/          Rust/Axum API + monitor engines
 client/src/         React + Vite + Tailwind (TypeScript, ESM)
-server/data/        GITIGNORED — SQLite DB, HTML snapshots, diff files, NVD mirror
+data/               GITIGNORED — SQLite DB, HTML snapshots, diff files, NVD mirror
 ```
 
-## TypeScript Rules
+## TypeScript Rules (frontend)
 
 - **Strict mode everywhere** — no `any` casts; use `unknown` with type guards
 - **Named exports only** — no default exports (except React components, which may use default)
 - **No implicit returns** in async functions that should always return a value
-- All interfaces live in `server/src/types.ts` (backend) or `client/src/types.ts` (frontend)
-- Shared notifier interfaces live in `server/src/notifiers/types.ts`
+- All interfaces live in `client/src/types.ts`
+
+## Rust Rules (backend)
+
+- All shared types live in `vigil/src/types.rs`
+- Auth middleware in `vigil/src/auth/middleware.rs` — `require_auth` and `require_admin` extractors
+- Add new routes in `vigil/src/api/mod.rs` and implement handlers in `vigil/src/api/<domain>.rs`
 
 ## Before Finishing Any Task
 
 Always run:
 ```bash
-npm run typecheck   # must pass with 0 errors
-npm run lint        # must pass with 0 errors
+cargo check --manifest-path vigil/Cargo.toml   # must pass with 0 errors
+npm run typecheck --prefix client               # must pass with 0 errors
+npm run lint --prefix client                    # must pass with 0 errors
 ```
 
 ## Database Schema Changes
 
-1. Edit `server/src/db/schema.sql`
-2. If changing existing tables: add a migration comment and handle it in `database.ts` (use `ALTER TABLE` or drop+recreate for dev)
-3. **Never** delete `server/data/` manually — let the app recreate it
+1. Edit `vigil/src/db/schema.sql`
+2. Handle migrations in `vigil/src/db/mod.rs`
+3. **Never** delete `data/` manually — let the app recreate it
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `server/src/types.ts` | All shared backend types (Server, CheckResult, AlertPayload, auth types, etc.) |
-| `server/src/db/database.ts` | SQLite singleton; also ensures `data/snapshots/` and `data/diffs/` exist |
-| `server/src/middleware/auth.ts` | `requireAuth` and `requireAdmin` Express middleware; augments `req.user` |
-| `server/src/auth/seed.ts` | First-boot admin user seeding from env vars (idempotent) |
-| `server/src/api/auth.ts` | Login / logout / me routes (no auth required) |
-| `server/src/api/users.ts` | User CRUD (admin-only) |
-| `server/src/monitor/engine.ts` | HTTP check scheduler — call `scheduleServer`/`unscheduleServer`/`rescheduleServer` from API routes |
-| `server/src/notifiers/types.ts` | `INotifier` interface — implement this to add a new notification channel |
-| `server/src/notifiers/index.ts` | `NOTIFIER_MAP` registry + `sendAlert()` dispatch |
+| `vigil/src/types.rs` | All shared backend types (Server, CheckResult, AlertPayload, auth types, etc.) |
+| `vigil/src/db/mod.rs` | SQLite connection pool; also ensures `data/snapshots/` and `data/diffs/` exist |
+| `vigil/src/auth/middleware.rs` | `require_auth` and `require_admin` Axum extractors |
+| `vigil/src/auth/seed.rs` | First-boot admin user seeding from env vars (idempotent) |
+| `vigil/src/api/auth.rs` | Login / logout / me routes (no auth required) |
+| `vigil/src/api/users.rs` | User CRUD (admin-only) |
+| `vigil/src/api/mod.rs` | All route registrations |
+| `vigil/src/monitor/engine.rs` | HTTP check scheduler |
+| `vigil/src/notifiers/mod.rs` | Notifier trait + `send_alert()` dispatch |
 | `client/src/api/client.ts` | All frontend API calls — typed fetch wrapper with `credentials: "include"` and 401 redirect |
 | `client/src/contexts/AuthContext.tsx` | React context providing `user`, `isAdmin`, `loading`, `login`, `logout` |
 | `client/src/hooks/useAuth.ts` | `useAuth()` hook — import from here, not from AuthContext directly |
@@ -56,12 +62,12 @@ npm run lint        # must pass with 0 errors
 
 All API routes require a valid session. The only exceptions are `/api/auth/login`, `/api/auth/logout`, and `/api/health`.
 
-- `requireAuth` — validates the httpOnly JWT cookie, attaches `req.user`; registered at the router level in `index.ts`
-- `requireAdmin` — calls `requireAuth` then checks `role === "admin"`; applied inline on every mutating route (POST/PUT/DELETE/trigger) inside each router file
+- `require_auth` — validates the httpOnly JWT cookie, attaches user to request state
+- `require_admin` — checks `role == "admin"`; applied on all mutating routes
 
 When adding a new router:
-1. Register it in `index.ts` with `requireAuth` (or `requireAdmin` if fully admin-only)
-2. Add `requireAdmin` as the first argument on any write routes inside the router file
+1. Register it in `vigil/src/api/mod.rs`
+2. Apply `require_admin` on any write routes inside the handler file
 
 When adding write actions to the frontend:
 - Gate buttons/forms with `const { isAdmin } = useAuth()` and `{isAdmin && ...}`
@@ -77,11 +83,11 @@ Content is **always stored on disk** (`data/snapshots/` and `data/diffs/`), neve
 
 ## Notification Channels
 
-Each notifier module exports an `INotifier` object. To add a new channel:
-1. Create `server/src/notifiers/<name>.ts`
-2. Add it to `NOTIFIER_MAP` in `server/src/notifiers/index.ts`
+Each notifier implements the notifier trait. To add a new channel:
+1. Create `vigil/src/notifiers/<name>.rs`
+2. Register it in `vigil/src/notifiers/mod.rs`
 
 ## Dev Ports
 
-- Express API: `http://localhost:3001`
+- Rust API: `http://localhost:3001`
 - Vite dev server: `http://localhost:5173` (proxies `/api` → `:3001`)
