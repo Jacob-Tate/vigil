@@ -41,6 +41,8 @@ pub fn router(state: AppState) -> Router {
                 .delete(servers::delete),
         )
         .route("/api/servers/:id/check", post(servers::trigger_check))
+        .route("/api/servers/:id/reset-baseline", post(servers::reset_baseline))
+        .route("/api/servers/:id/screenshot", get(servers::screenshot))
         // Checks
         .route("/api/checks", get(checks::list))
         .route("/api/checks/stats/:serverId", get(checks::stats))

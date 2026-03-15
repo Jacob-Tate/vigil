@@ -1,5 +1,7 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
+    http::header,
+    response::IntoResponse,
     Json,
 };
 use serde::Deserialize;
@@ -8,6 +10,7 @@ use serde_json::{json, Value};
 use crate::{
     auth::middleware::{RequireAdmin, RequireAuth},
     error::AppError,
+    monitor::screenshotter,
     state::AppState,
     types::{Check, Server, ServerWithStatus},
 };
@@ -271,6 +274,87 @@ pub async fn delete(
     // Cancel the monitoring task for the deleted server
     state.monitor_engine.unschedule(id).await;
     Ok(Json(json!({ "ok": true })))
+}
+
+// POST /api/servers/:id/reset-baseline
+pub async fn reset_baseline(
+    _admin: RequireAdmin,
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<Value>, AppError> {
+    let db = state.db.clone();
+    let changes = tokio::task::spawn_blocking(move || {
+        let conn = db.lock().unwrap();
+        conn.execute(
+            "UPDATE servers SET baseline_hash = NULL, baseline_file = NULL WHERE id = ?1",
+            rusqlite::params![id],
+        )
+    })
+    .await
+    .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Db)?;
+
+    if changes == 0 {
+        return Err(AppError::NotFound(format!("Server {} not found", id)));
+    }
+
+    // Reschedule so the next tick treats this as a fresh baseline
+    let db2 = state.db.clone();
+    let server = tokio::task::spawn_blocking(move || query_server_with_status(&db2.lock().unwrap(), id))
+        .await
+        .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
+        .map_err(AppError::Db)?
+        .ok_or_else(|| AppError::Internal("Server not found after update".into()))?;
+
+    state.monitor_engine.reschedule(server.server).await;
+    Ok(Json(json!({ "ok": true })))
+}
+
+// GET /api/servers/:id/screenshot
+#[derive(Deserialize)]
+pub struct ScreenshotQuery {
+    #[allow(dead_code)]
+    pub force: Option<String>,
+}
+
+pub async fn screenshot(
+    _auth: RequireAuth,
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    _query: Query<ScreenshotQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    // Verify server exists
+    let db = state.db.clone();
+    let exists = tokio::task::spawn_blocking(move || {
+        use rusqlite::OptionalExtension;
+        let conn = db.lock().unwrap();
+        conn.query_row(
+            "SELECT id FROM servers WHERE id = ?1",
+            rusqlite::params![id],
+            |row| row.get::<_, i64>(0),
+        )
+        .optional()
+    })
+    .await
+    .map_err(|e: tokio::task::JoinError| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Db)?;
+
+    if exists.is_none() {
+        return Err(AppError::NotFound(format!("Server {} not found", id)));
+    }
+
+    let path = screenshotter::screenshot_path(&state.config.data_dir, id);
+    let bytes = tokio::fs::read(&path).await.map_err(|_| {
+        AppError::NotFound(format!("No screenshot available yet for server {}", id))
+    })?;
+
+    Ok((
+        [
+            (header::CONTENT_TYPE, "image/png"),
+            (header::CACHE_CONTROL, "no-cache"),
+        ],
+        bytes,
+    ))
 }
 
 // POST /api/servers/:id/check  (trigger immediate check)

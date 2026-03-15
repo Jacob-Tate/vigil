@@ -68,6 +68,7 @@ pub fn ensure_data_dirs(data_dir: &str) -> anyhow::Result<()> {
         "",
         "snapshots",
         "diffs",
+        "screenshots",
         "ssl/snapshots",
         "ssl/history",
     ] {

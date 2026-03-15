@@ -18,6 +18,7 @@ use super::{
     checker::check_server,
     differ::{compute_diff, has_meaningful_changes},
     hasher::{hash_content, normalize_html, parse_ignore_patterns},
+    screenshotter,
 };
 
 #[derive(Clone)]
@@ -212,6 +213,12 @@ async fn run_check_for_server(server: Server, db: &DbPool, config: &Arc<Config>)
                     ).ok();
                 }).await.ok();
                 tracing::info!("[monitor] Baseline set for '{}'", server.name);
+                let data_dir = config.data_dir.clone();
+                let url = server.url.clone();
+                let sid = server.id;
+                tokio::spawn(async move {
+                    screenshotter::capture_screenshot(&data_dir, sid, &url).await;
+                });
             }
         } else if fresh.baseline_hash.as_deref() != Some(hash.as_str()) {
             let old_html = tokio::fs::read_to_string(&snapshot_path)
@@ -307,6 +314,12 @@ async fn run_check_for_server(server: Server, db: &DbPool, config: &Arc<Config>)
                         "[monitor] Content changed for '{}', diff saved (id: {:?})",
                         server.name, diff_id
                     );
+                    let data_dir = config.data_dir.clone();
+                    let url = server.url.clone();
+                    let sid = server.id;
+                    tokio::spawn(async move {
+                        screenshotter::capture_screenshot(&data_dir, sid, &url).await;
+                    });
                 }
             }
         }
