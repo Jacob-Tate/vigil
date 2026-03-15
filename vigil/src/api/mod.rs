@@ -43,6 +43,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/servers/:id/check", post(servers::trigger_check))
         // Checks
         .route("/api/checks", get(checks::list))
+        .route("/api/checks/stats/:serverId", get(checks::stats))
         .route("/api/checks/:serverId", get(checks::latest))
         // Content diffs
         .route("/api/diffs/:diffId", get(diffs::get_diff))
@@ -71,6 +72,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/ssl/targets/:id/check", post(ssl_targets::trigger_check))
         // SSL checks
         .route("/api/ssl/checks", get(ssl_checks::list))
+        .route("/api/ssl/checks/stats/:targetId", get(ssl_checks::stats))
         .route("/api/ssl/checks/:targetId", get(ssl_checks::latest))
         // NVD sync & browse
         .route("/api/nvd/sync", post(nvd::trigger_sync))

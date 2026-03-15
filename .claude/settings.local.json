@@ -5,7 +5,8 @@
       "Bash(powershell -Command \"Set-Location ''c:\\\\Users\\\\jacob\\\\source\\\\monitor\\\\vigil''; cargo build 2>&1\")",
       "Bash(cargo build:*)",
       "Bash(cargo check:*)",
-      "Bash(./sqlite3.exe data/monitor.db *)"
+      "Bash(./sqlite3.exe data/monitor.db *)",
+      "Bash(git *)"
     ]
   }
 }
