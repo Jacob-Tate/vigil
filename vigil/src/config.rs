@@ -91,7 +91,7 @@ impl Config {
             session_duration_hours: env::var("SESSION_DURATION_HOURS")
                 .ok()
                 .and_then(|h| h.parse().ok())
-                .unwrap_or(24),
+                .unwrap_or(8),
             client_origin,
             base_url,
             alert_cooldown_seconds: env::var("ALERT_COOLDOWN_SECONDS")

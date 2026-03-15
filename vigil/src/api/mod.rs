@@ -119,8 +119,12 @@ pub fn router(state: AppState) -> Router {
             put(users::update).delete(users::delete),
         )
         .route("/api/users/:id/change-password", post(users::change_password))
-        .with_state(state)
+        .with_state(state.clone())
         .layer(middleware::from_fn(audit::audit_log))
+        .layer(middleware::from_fn_with_state(
+            state,
+            crate::auth::renewal::sliding_session_renewal,
+        ))
 }
 
 async fn health() -> axum::Json<serde_json::Value> {
