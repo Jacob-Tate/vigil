@@ -48,6 +48,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/checks/stats/:serverId", get(checks::stats))
         .route("/api/checks/:serverId", get(checks::latest))
         // Content diffs
+        .route("/api/diffs", get(diffs::list))
         .route("/api/diffs/:diffId", get(diffs::get_diff))
         // Notifications
         .route(

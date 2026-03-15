@@ -194,7 +194,7 @@ pub struct UpdateServer {
     url: Option<String>,
     interval_seconds: Option<i64>,
     response_time_threshold_ms: Option<i64>,
-    active: Option<i64>,
+    active: Option<bool>,
     ignore_patterns: Option<Value>,
 }
 
@@ -218,7 +218,7 @@ pub async fn update(
         if let Some(v) = body.url { parts.push("url = ?".into()); params.push(Value::Text(v)); }
         if let Some(v) = body.interval_seconds { parts.push("interval_seconds = ?".into()); params.push(Value::Integer(v)); }
         if let Some(v) = body.response_time_threshold_ms { parts.push("response_time_threshold_ms = ?".into()); params.push(Value::Integer(v)); }
-        if let Some(v) = body.active { parts.push("active = ?".into()); params.push(Value::Integer(v)); }
+        if let Some(v) = body.active { parts.push("active = ?".into()); params.push(Value::Integer(if v { 1 } else { 0 })); }
         if let Some(v) = ignore_patterns { parts.push("ignore_patterns = ?".into()); params.push(Value::Text(v)); }
 
         if parts.is_empty() {
