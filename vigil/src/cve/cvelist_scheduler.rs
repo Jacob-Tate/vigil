@@ -4,13 +4,12 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{config::Config, db::DbPool, types::SyncProgress};
 
-use super::{cvelist_importer, engine::CveEngine, enrichment_alerter::check_enrichment_alerts};
+use super::{cvelist_importer, enrichment_alerter::check_enrichment_alerts};
 
 pub fn start(
     db: DbPool,
     config: Arc<Config>,
     is_syncing: Arc<AtomicBool>,
-    cve_engine: Arc<CveEngine>,
     progress: Arc<Mutex<Option<SyncProgress>>>,
 ) -> CancellationToken {
     let token = CancellationToken::new();
@@ -24,7 +23,7 @@ pub fn start(
         loop {
             tokio::select! {
                 _ = ticker.tick() => {
-                    run(&db, &config, &is_syncing, &cve_engine, &progress).await;
+                    run(&db, &config, &is_syncing, &progress).await;
                 }
                 _ = token_clone.cancelled() => {
                     tracing::info!("[cvelist-scheduler] stopped");
@@ -42,7 +41,6 @@ pub async fn run(
     db: &DbPool,
     config: &Arc<Config>,
     is_syncing: &Arc<AtomicBool>,
-    cve_engine: &Arc<CveEngine>,
     progress: &Arc<Mutex<Option<SyncProgress>>>,
 ) {
     if is_syncing.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
@@ -53,8 +51,9 @@ pub async fn run(
     match cvelist_importer::sync_cvelist(db, &data_dir, progress.clone()).await {
         Ok(r) => {
             tracing::info!(count = r.count, "[cvelist-scheduler] sync complete");
-            cve_engine.evaluate_all().await;
-            check_enrichment_alerts(db, config).await;
+            if r.count > 0 {
+                check_enrichment_alerts(db, config).await;
+            }
         }
         Err(e) => tracing::error!("[cvelist-scheduler] sync error: {}", e),
     }

@@ -100,6 +100,25 @@ pub async fn sync_vulnrichment(
             git_clone(REPO_URL, &repo_dir_str, &["--depth", "1"])?;
         }
 
+        let repo_version = git_head(&repo_dir_str).unwrap_or_default();
+
+        // Check if already up to date
+        let last_hash: Option<String> = {
+            let conn = db.lock().unwrap();
+            conn.query_row(
+                "SELECT sha256 FROM nvd_feed_state WHERE feed_name = 'vulnrichment'",
+                [],
+                |row| row.get(0),
+            )
+            .ok()
+        };
+        if let Some(ref last) = last_hash {
+            if !last.is_empty() && *last == repo_version {
+                tracing::info!("[vulnrichment] already up to date, nothing to process");
+                return Ok(VulnrichmentSyncResult { count: 0 });
+            }
+        }
+
         set_progress("scan", "Scanning Vulnrichment file index…".to_string(), 0, 0);
 
         // Build file list
@@ -206,6 +225,17 @@ pub async fn sync_vulnrichment(
             conn.execute_batch("PRAGMA synchronous = NORMAL; PRAGMA cache_size = -65536;")?;
         }
 
+        // Update sync state
+        {
+            let conn = db.lock().unwrap();
+            conn.execute(
+                "INSERT OR REPLACE INTO nvd_feed_state
+                 (feed_name, sha256, total_cves, imported_at)
+                 VALUES ('vulnrichment', ?1, ?2, ?3)",
+                rusqlite::params![repo_version, count as i64, synced_at],
+            )?;
+        }
+
         tracing::info!(count, "[vulnrichment] upserted SSVC entries");
         Ok(VulnrichmentSyncResult { count })
     })
@@ -288,4 +318,12 @@ fn git_pull(repo_dir: &str) -> anyhow::Result<()> {
         .status()?;
     if !status.success() { anyhow::bail!("git pull failed in {}", repo_dir); }
     Ok(())
+}
+
+fn git_head(repo_dir: &str) -> anyhow::Result<String> {
+    let output = Command::new("git")
+        .args(["rev-parse", "HEAD"]).current_dir(repo_dir)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .output()?;
+    Ok(String::from_utf8(output.stdout)?.trim().to_string())
 }

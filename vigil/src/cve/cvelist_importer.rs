@@ -177,8 +177,20 @@ pub async fn sync_cvelist(
         let parsed: Vec<CvelistRow> = files_to_process
             .par_iter()
             .filter_map(|path| {
-                let raw = std::fs::read_to_string(path).ok()?;
-                let doc = serde_json::from_str::<CveDoc>(&raw).ok()?;
+                let raw = match std::fs::read_to_string(path) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        tracing::warn!(path = %path.display(), error = %e, "[cvelist] failed to read file");
+                        return None;
+                    }
+                };
+                let doc = match serde_json::from_str::<CveDoc>(&raw) {
+                    Ok(d) => d,
+                    Err(e) => {
+                        tracing::warn!(path = %path.display(), error = %e, "[cvelist] failed to parse CVE JSON");
+                        return None;
+                    }
+                };
                 let done = files_done_clone.fetch_add(1, AtomicOrdering::Relaxed) + 1;
                 if done % 5_000 == 0 {
                     set_progress(
@@ -274,6 +286,14 @@ pub async fn sync_cvelist(
         {
             let conn = db.lock().unwrap();
             conn.execute_batch("PRAGMA synchronous = NORMAL; PRAGMA cache_size = -65536;")?;
+        }
+
+        // Only advance the stored HEAD hash if we either had nothing to process (already caught
+        // up at the file level) or we successfully inserted at least one record.  If files were
+        // found but every parse/insert failed, leave the hash unchanged so the next sync retries.
+        if total_files > 0 && count == 0 {
+            tracing::warn!(total_files, "[cvelist] no records inserted despite changed files — leaving sync state unchanged so next run retries");
+            return Ok(CvelistSyncResult { count: 0 });
         }
 
         // Update sync state
@@ -378,6 +398,10 @@ fn git_diff_files(repo_dir: &str, from_hash: &str) -> anyhow::Result<Vec<String>
         .args(["diff", "--name-only", from_hash, "HEAD"]).current_dir(repo_dir)
         .env("GIT_TERMINAL_PROMPT", "0")
         .output()?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git diff failed ({}): {}", output.status, stderr.trim());
+    }
     let lines = String::from_utf8(output.stdout)?;
     Ok(lines.lines()
         .filter(|f| f.ends_with(".json") && f.contains("CVE-"))

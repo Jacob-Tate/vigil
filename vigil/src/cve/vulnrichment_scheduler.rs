@@ -51,7 +51,9 @@ pub async fn run(
     match vulnrichment_importer::sync_vulnrichment(db, &data_dir, progress.clone()).await {
         Ok(r) => {
             tracing::info!(count = r.count, "[vulnrichment-scheduler] sync complete");
-            check_enrichment_alerts(db, config).await;
+            if r.count > 0 {
+                check_enrichment_alerts(db, config).await;
+            }
         }
         Err(e) => tracing::error!("[vulnrichment-scheduler] sync error: {}", e),
     }

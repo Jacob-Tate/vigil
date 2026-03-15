@@ -87,10 +87,9 @@ pub async fn trigger_sync(_admin: RequireAdmin, State(state): State<AppState>) -
     let db = state.db.clone();
     let config = state.config.clone();
     let is_syncing = state.cvelist_syncing.clone();
-    let cve_engine = state.cve_engine.clone();
     let progress = state.cvelist_progress.clone();
     tokio::spawn(async move {
-        crate::cve::cvelist_scheduler::run(&db, &config, &is_syncing, &cve_engine, &progress).await;
+        crate::cve::cvelist_scheduler::run(&db, &config, &is_syncing, &progress).await;
     });
     Ok(Json(json!({ "ok": true, "queued": true })))
 }

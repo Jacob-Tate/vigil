@@ -109,7 +109,6 @@ async fn main() -> anyhow::Result<()> {
         pool.clone(),
         config_arc.clone(),
         cvelist_syncing.clone(),
-        cve_engine.clone(),
         cvelist_progress.clone(),
     );
 
