@@ -84,3 +84,125 @@ pub fn parse_ignore_patterns(patterns_json: Option<&str>) -> Vec<Regex> {
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- normalize_html ---
+
+    #[test]
+    fn collapses_whitespace() {
+        let html = "  hello   world  \n\t  foo  ";
+        assert_eq!(normalize_html(html, &[]), "hello world foo");
+    }
+
+    #[test]
+    fn strips_csrf_meta_tag() {
+        let html = r#"<html><meta name="csrf-token" content="abc123def456ghi789jkl0"><p>ok</p></html>"#;
+        let result = normalize_html(html, &[]);
+        assert!(!result.contains("csrf-token"));
+        assert!(result.contains("ok"));
+    }
+
+    #[test]
+    fn strips_csrf_token_value() {
+        let html = r#"<input name="csrf_token: abcdefghijklmnopqrstuvwxyz123">"#;
+        let result = normalize_html(html, &[]);
+        assert!(!result.contains("abcdefghijklmnopqrstuvwxyz123"));
+    }
+
+    #[test]
+    fn strips_google_analytics_id() {
+        let html = r#"<script>ga('create', 'UA-12345-6', 'auto');</script>"#;
+        let result = normalize_html(html, &[]);
+        assert!(!result.contains("UA-12345-6"));
+    }
+
+    #[test]
+    fn strips_gtm_id() {
+        let html = r#"<p>GTM-ABCDEF</p>"#;
+        let result = normalize_html(html, &[]);
+        assert!(!result.contains("GTM-ABCDEF"));
+    }
+
+    #[test]
+    fn custom_ignore_pattern_applied() {
+        let pattern = Regex::new(r"(?i)\$[\d.]+").unwrap();
+        let html = "<p>Price: $99.99 — Buy now!</p>";
+        let result = normalize_html(html, &[pattern]);
+        assert!(!result.contains("99.99"));
+        assert!(result.contains("Buy now!"));
+    }
+
+    #[test]
+    fn content_without_dynamic_parts_unchanged_except_whitespace() {
+        let html = "  <p>Static content</p>  ";
+        let result = normalize_html(html, &[]);
+        assert_eq!(result, "<p>Static content</p>");
+    }
+
+    // --- hash_content ---
+
+    #[test]
+    fn hash_is_deterministic() {
+        let html = "<html><body>Hello, world!</body></html>";
+        assert_eq!(hash_content(html, &[]), hash_content(html, &[]));
+    }
+
+    #[test]
+    fn different_content_yields_different_hash() {
+        let a = hash_content("<p>Version A</p>", &[]);
+        let b = hash_content("<p>Version B</p>", &[]);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn whitespace_only_diff_yields_same_hash() {
+        // Extra spaces vs newlines between identical content should normalize to the same hash
+        let a = hash_content("<p>Hello</p>   <p>World</p>", &[]);
+        let b = hash_content("<p>Hello</p>\n<p>World</p>", &[]);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn hash_is_64_char_hex_string() {
+        let hash = hash_content("anything", &[]);
+        assert_eq!(hash.len(), 64, "SHA-256 digest should be 64 hex chars");
+        assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    // --- parse_ignore_patterns ---
+
+    #[test]
+    fn none_returns_empty() {
+        assert!(parse_ignore_patterns(None).is_empty());
+    }
+
+    #[test]
+    fn valid_json_array_compiles_patterns() {
+        let json = r#"["hello", "world\\d+"]"#;
+        let patterns = parse_ignore_patterns(Some(json));
+        assert_eq!(patterns.len(), 2);
+    }
+
+    #[test]
+    fn invalid_json_returns_empty() {
+        assert!(parse_ignore_patterns(Some("not json")).is_empty());
+    }
+
+    #[test]
+    fn invalid_regex_entries_skipped() {
+        // "[unclosed" is not a valid regex (unclosed character class)
+        let json = r#"["valid_pattern", "[unclosed"]"#;
+        let patterns = parse_ignore_patterns(Some(json));
+        assert_eq!(patterns.len(), 1, "invalid regex should be silently skipped");
+    }
+
+    #[test]
+    fn empty_strings_skipped() {
+        let json = r#"["", "valid", ""]"#;
+        let patterns = parse_ignore_patterns(Some(json));
+        assert_eq!(patterns.len(), 1);
+    }
+}

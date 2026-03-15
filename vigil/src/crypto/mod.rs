@@ -92,3 +92,61 @@ pub fn decrypt_config(stored: &str, raw_key: &str) -> anyhow::Result<String> {
 
     Ok(String::from_utf8(plaintext)?)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn roundtrip() {
+        let key = "test-encryption-key-for-unit-tests";
+        let plaintext = r#"{"webhookUrl":"https://example.com/hook"}"#;
+        let encrypted = encrypt_config(plaintext, key).unwrap();
+        assert!(encrypted.starts_with("enc:"), "encrypted value should start with 'enc:'");
+        let decrypted = decrypt_config(&encrypted, key).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn produces_different_ciphertexts_for_same_plaintext() {
+        // Random IV means two calls should never produce identical output
+        let key = "test-key";
+        let a = encrypt_config("same plaintext", key).unwrap();
+        let b = encrypt_config("same plaintext", key).unwrap();
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn legacy_plaintext_passes_through() {
+        // Rows written before encryption was added have no "enc:" prefix
+        let legacy = r#"{"webhookUrl":"https://example.com"}"#;
+        let result = decrypt_config(legacy, "any-key").unwrap();
+        assert_eq!(result, legacy);
+    }
+
+    #[test]
+    fn wrong_key_fails_decryption() {
+        let ciphertext = encrypt_config("secret data", "key-a").unwrap();
+        let result = decrypt_config(&ciphertext, "key-b");
+        assert!(result.is_err(), "decryption with wrong key should fail");
+    }
+
+    #[test]
+    fn invalid_format_fails() {
+        // Three base64 parts required after "enc:", but the values are garbage
+        let result = decrypt_config("enc:aaa:bbb", "key");
+        assert!(result.is_err(), "only two parts should be an error");
+    }
+
+    #[test]
+    fn truncated_iv_fails() {
+        // A valid base64 IV that is only 6 bytes (not the required 12)
+        use base64::{engine::general_purpose::STANDARD as B64, Engine};
+        let short_iv = B64.encode([0u8; 6]);
+        let fake_tag = B64.encode([0u8; 16]);
+        let fake_ct = B64.encode([0u8; 8]);
+        let stored = format!("enc:{}:{}:{}", short_iv, fake_tag, fake_ct);
+        let result = decrypt_config(&stored, "key");
+        assert!(result.is_err(), "short IV should be rejected");
+    }
+}
