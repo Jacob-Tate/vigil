@@ -192,7 +192,7 @@ pub struct UpdateCveTarget {
     version: Option<String>,
     min_alert_cvss_score: Option<f64>,
     check_interval_seconds: Option<i64>,
-    active: Option<i64>,
+    active: Option<bool>,
 }
 
 // PUT /api/cve/targets/:id
@@ -209,7 +209,7 @@ pub async fn update(_admin: RequireAdmin, State(state): State<AppState>, Path(id
         if let Some(v) = body.version { parts.push("version = ?".into()); params.push(Value::Text(v)); }
         if let Some(v) = body.min_alert_cvss_score { parts.push("min_alert_cvss_score = ?".into()); params.push(Value::Real(v)); }
         if let Some(v) = body.check_interval_seconds { parts.push("check_interval_seconds = ?".into()); params.push(Value::Integer(v)); }
-        if let Some(v) = body.active { parts.push("active = ?".into()); params.push(Value::Integer(v)); }
+        if let Some(v) = body.active { parts.push("active = ?".into()); params.push(Value::Integer(if v { 1 } else { 0 })); }
         if parts.is_empty() { return Ok::<_, rusqlite::Error>(0usize); }
         let sql = format!("UPDATE cve_targets SET {} WHERE id = ?", parts.join(", "));
         params.push(Value::Integer(id));
@@ -229,6 +229,45 @@ pub async fn update(_admin: RequireAdmin, State(state): State<AppState>, Path(id
         .ok_or_else(|| AppError::Internal("Target not found after update".into()))?;
     state.cve_engine.reschedule(t.target.clone()).await;
     Ok(Json(json!(t)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UpdateCveTarget;
+
+    /// Regression: frontend sends `active` as a JSON boolean; the handler must
+    /// deserialise it correctly and convert to the SQLite 0/1 integer.
+    /// Caused a 422 Unprocessable Entity when `active` was typed as Option<i64>.
+    #[test]
+    fn update_cve_target_active_bool_true() {
+        let body: UpdateCveTarget =
+            serde_json::from_str(r#"{"active": true}"#).expect("should deserialise boolean true");
+        let db_val = body.active.map(|v| if v { 1i64 } else { 0i64 });
+        assert_eq!(db_val, Some(1));
+    }
+
+    #[test]
+    fn update_cve_target_active_bool_false() {
+        let body: UpdateCveTarget =
+            serde_json::from_str(r#"{"active": false}"#).expect("should deserialise boolean false");
+        let db_val = body.active.map(|v| if v { 1i64 } else { 0i64 });
+        assert_eq!(db_val, Some(0));
+    }
+
+    #[test]
+    fn update_cve_target_active_omitted() {
+        let body: UpdateCveTarget =
+            serde_json::from_str(r#"{"name": "Test"}"#).expect("should deserialise without active");
+        assert!(body.active.is_none());
+    }
+
+    /// Integer 1 must NOT silently pass — the frontend always sends a boolean.
+    /// Catching this prevents the old Option<i64> mistake from sneaking back in.
+    #[test]
+    fn update_cve_target_active_integer_rejected() {
+        let result = serde_json::from_str::<UpdateCveTarget>(r#"{"active": 1}"#);
+        assert!(result.is_err(), "integer active should be rejected; frontend sends booleans");
+    }
 }
 
 // DELETE /api/cve/targets/:id
