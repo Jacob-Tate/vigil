@@ -150,7 +150,8 @@ pub async fn create(
 
 #[derive(Deserialize)]
 pub struct UpdateChannel {
-    label: Option<String>,
+    #[serde(default, deserialize_with = "crate::api::deserialize_nullable_string")]
+    label: Option<Option<String>>,
     config: Option<Value>,
     active: Option<bool>,
 }
@@ -173,7 +174,7 @@ pub async fn update(
 
         if let Some(v) = body.label {
             parts.push("label = ?".into());
-            params.push(Value::Text(v));
+            params.push(v.map(Value::Text).unwrap_or(Value::Null));
         }
         if let Some(config) = body.config {
             let config_str = config.to_string();

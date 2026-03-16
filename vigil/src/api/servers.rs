@@ -195,7 +195,8 @@ pub struct UpdateServer {
     interval_seconds: Option<i64>,
     response_time_threshold_ms: Option<i64>,
     active: Option<bool>,
-    ignore_patterns: Option<Value>,
+    #[serde(default, deserialize_with = "crate::api::deserialize_nullable_json")]
+    ignore_patterns: Option<Option<Value>>,
 }
 
 // PUT /api/servers/:id
@@ -205,7 +206,7 @@ pub async fn update(
     Path(id): Path<i64>,
     Json(body): Json<UpdateServer>,
 ) -> Result<Json<Value>, AppError> {
-    let ignore_patterns = body.ignore_patterns.map(|v| v.to_string());
+    let ignore_patterns = body.ignore_patterns.map(|opt| opt.map(|v| v.to_string()));
     let db = state.db.clone();
 
     let changes = tokio::task::spawn_blocking(move || {
@@ -219,7 +220,7 @@ pub async fn update(
         if let Some(v) = body.interval_seconds { parts.push("interval_seconds = ?".into()); params.push(Value::Integer(v)); }
         if let Some(v) = body.response_time_threshold_ms { parts.push("response_time_threshold_ms = ?".into()); params.push(Value::Integer(v)); }
         if let Some(v) = body.active { parts.push("active = ?".into()); params.push(Value::Integer(if v { 1 } else { 0 })); }
-        if let Some(v) = ignore_patterns { parts.push("ignore_patterns = ?".into()); params.push(Value::Text(v)); }
+        if let Some(v) = ignore_patterns { parts.push("ignore_patterns = ?".into()); params.push(v.map(Value::Text).unwrap_or(Value::Null)); }
 
         if parts.is_empty() {
             return Ok::<_, rusqlite::Error>(0usize);

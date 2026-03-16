@@ -187,9 +187,11 @@ pub async fn create(_admin: RequireAdmin, State(state): State<AppState>, Json(bo
 #[derive(Deserialize)]
 pub struct UpdateCveTarget {
     name: Option<String>,
-    vendor: Option<String>,
+    #[serde(default, deserialize_with = "crate::api::deserialize_nullable_string")]
+    vendor: Option<Option<String>>,
     product: Option<String>,
-    version: Option<String>,
+    #[serde(default, deserialize_with = "crate::api::deserialize_nullable_string")]
+    version: Option<Option<String>>,
     min_alert_cvss_score: Option<f64>,
     check_interval_seconds: Option<i64>,
     active: Option<bool>,
@@ -204,9 +206,9 @@ pub async fn update(_admin: RequireAdmin, State(state): State<AppState>, Path(id
         let mut parts: Vec<String> = Vec::new();
         let mut params: Vec<Value> = Vec::new();
         if let Some(v) = body.name { parts.push("name = ?".into()); params.push(Value::Text(v)); }
-        if let Some(v) = body.vendor { parts.push("vendor = ?".into()); params.push(Value::Text(v)); }
+        if let Some(v) = body.vendor { parts.push("vendor = ?".into()); params.push(v.map(Value::Text).unwrap_or(Value::Null)); }
         if let Some(v) = body.product { parts.push("product = ?".into()); params.push(Value::Text(v)); }
-        if let Some(v) = body.version { parts.push("version = ?".into()); params.push(Value::Text(v)); }
+        if let Some(v) = body.version { parts.push("version = ?".into()); params.push(v.map(Value::Text).unwrap_or(Value::Null)); }
         if let Some(v) = body.min_alert_cvss_score { parts.push("min_alert_cvss_score = ?".into()); params.push(Value::Real(v)); }
         if let Some(v) = body.check_interval_seconds { parts.push("check_interval_seconds = ?".into()); params.push(Value::Integer(v)); }
         if let Some(v) = body.active { parts.push("active = ?".into()); params.push(Value::Integer(if v { 1 } else { 0 })); }

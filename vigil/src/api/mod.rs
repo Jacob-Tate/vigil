@@ -23,6 +23,27 @@ pub mod ssl_targets;
 pub mod users;
 pub mod vulnrichment;
 
+/// Deserializes a JSON field that may be absent, null, or a string into `Option<Option<String>>`.
+/// - Field absent  → `None`         (no update)
+/// - Field = null  → `Some(None)`   (clear to NULL)
+/// - Field = "foo" → `Some(Some("foo"))` (set value)
+pub fn deserialize_nullable_string<'de, D>(de: D) -> Result<Option<Option<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    Ok(Some(Option::<String>::deserialize(de)?))
+}
+
+/// Same as `deserialize_nullable_string` but for arbitrary JSON values.
+pub fn deserialize_nullable_json<'de, D>(de: D) -> Result<Option<Option<serde_json::Value>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    Ok(Some(Option::<serde_json::Value>::deserialize(de)?))
+}
+
 /// Builds the full Axum router with all API routes mounted.
 pub fn router(state: AppState) -> Router {
     Router::new()
