@@ -161,7 +161,7 @@ pub struct UpdateTarget {
     port: Option<i64>,
     check_interval_seconds: Option<i64>,
     expiry_threshold_hours: Option<i64>,
-    active: Option<i64>,
+    active: Option<bool>,
 }
 
 // PUT /api/ssl/targets/:id
@@ -177,7 +177,7 @@ pub async fn update(_admin: RequireAdmin, State(state): State<AppState>, Path(id
         if let Some(v) = body.port { parts.push("port = ?".into()); params.push(Value::Integer(v)); }
         if let Some(v) = body.check_interval_seconds { parts.push("check_interval_seconds = ?".into()); params.push(Value::Integer(v)); }
         if let Some(v) = body.expiry_threshold_hours { parts.push("expiry_threshold_hours = ?".into()); params.push(Value::Integer(v)); }
-        if let Some(v) = body.active { parts.push("active = ?".into()); params.push(Value::Integer(v)); }
+        if let Some(v) = body.active { parts.push("active = ?".into()); params.push(Value::Integer(if v { 1 } else { 0 })); }
         if parts.is_empty() { return Ok::<_, rusqlite::Error>(0usize); }
         let sql = format!("UPDATE ssl_targets SET {} WHERE id = ?", parts.join(", "));
         params.push(Value::Integer(id));
@@ -228,4 +228,40 @@ pub async fn trigger_check(_admin: RequireAdmin, State(state): State<AppState>, 
     };
     state.ssl_engine.reschedule(t.target).await;
     Ok(Json(json!({ "ok": true, "queued": true })))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UpdateTarget;
+
+    /// Regression: frontend sends `active` as a JSON boolean; same class of bug
+    /// as cve_targets (fixed in 3f87c00) — Option<i64> caused a 422.
+    #[test]
+    fn update_ssl_target_active_bool_true() {
+        let body: UpdateTarget =
+            serde_json::from_str(r#"{"active": true}"#).expect("should deserialise boolean true");
+        let db_val = body.active.map(|v| if v { 1i64 } else { 0i64 });
+        assert_eq!(db_val, Some(1));
+    }
+
+    #[test]
+    fn update_ssl_target_active_bool_false() {
+        let body: UpdateTarget =
+            serde_json::from_str(r#"{"active": false}"#).expect("should deserialise boolean false");
+        let db_val = body.active.map(|v| if v { 1i64 } else { 0i64 });
+        assert_eq!(db_val, Some(0));
+    }
+
+    #[test]
+    fn update_ssl_target_active_omitted() {
+        let body: UpdateTarget =
+            serde_json::from_str(r#"{"name": "example.com"}"#).expect("should deserialise without active");
+        assert!(body.active.is_none());
+    }
+
+    #[test]
+    fn update_ssl_target_active_integer_rejected() {
+        let result = serde_json::from_str::<UpdateTarget>(r#"{"active": 1}"#);
+        assert!(result.is_err(), "integer active should be rejected; frontend sends booleans");
+    }
 }
